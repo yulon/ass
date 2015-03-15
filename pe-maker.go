@@ -5,11 +5,6 @@ type PEMaker struct{
 	BinLibs map[string]string
 }
 
-const(
-	PE_ADDRESS_IMAGE_BASE = 4194304
-	PE_ADDRESS_RVA_BASE = 4096
-)
-
 func NewPEMaker(path string) (*PEMaker, error) {
 	f, err := NewBaseMaker(path)
 	if err != nil {
