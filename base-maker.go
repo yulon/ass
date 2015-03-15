@@ -116,7 +116,7 @@ func (bm *baseMaker) WriteRelative(startMark string, endMark string, offset int6
 	return err
 }
 
-func (bm *baseMaker) WriteFileOffset(mark string, bit uint8) error {
+func (bm *baseMaker) WriteFilePointer(mark string, bit uint8) error {
 	return bm.WriteRelative("", mark, 0, bit)
 }
 
