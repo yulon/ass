@@ -2,6 +2,7 @@ package ass
 
 import (
 	"os"
+	"errors"
 )
 
 type baseMaker struct{
@@ -31,66 +32,60 @@ func NewBaseMaker(path string) (*baseMaker, error) {
 	}, err
 }
 
-func (bm *baseMaker) Write(data []byte) (int64, error) {
-	l, e := bm.f.Write(data)
-	if e != nil {
-		return 0, e
+var DataTypeError = errors.New("Data Type Error")
+
+func toBin(data interface{}) ([]byte, error) {
+	switch d := data.(type){
+		case []byte:
+			return d, nil
+		case string:
+			return []byte(d), nil
+		case int32:
+			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24)}, nil
+		case uint32:
+			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24)}, nil
+		case int16:
+			return []byte{byte(d), byte(d >> 8)}, nil
+		case uint16:
+			return []byte{byte(d), byte(d >> 8)}, nil
+		case int8:
+			return []byte{byte(d)}, nil
+		case uint8:
+			return []byte{d}, nil
+		case int64:
+			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24), byte(d >> 32), byte(d >> 40), byte(d >> 48), byte(d >> 56)}, nil
+		case uint64:
+			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24), byte(d >> 32), byte(d >> 40), byte(d >> 48), byte(d >> 56)}, nil
+		default:
+			return nil, DataTypeError
 	}
-	l64 := int64(l)
-	bm.next += l64
-	return l64, nil
 }
 
-func (bm *baseMaker) WriteString(data string) (int64, error) {
-	return bm.Write([]byte(data))
-}
-
-func (bm *baseMaker) WriteInt8(n int64) (int64, error) {
-	i := int8(n)
-	return bm.Write([]byte{byte(i)})
-}
-
-func (bm *baseMaker) WriteInt16(n int64) (int64, error) {
-	i := int16(n)
-	return bm.Write([]byte{byte(i), byte(i >> 8)})
-}
-
-func (bm *baseMaker) WriteInt32(n int64) (int64, error) {
-	i := int32(n)
-	return bm.Write([]byte{byte(i), byte(i >> 8), byte(i >> 16), byte(i >> 24)})
-}
-
-func (bm *baseMaker) WriteInt64(i int64) (int64, error) {
-	return bm.Write([]byte{byte(i), byte(i >> 8), byte(i >> 16), byte(i >> 24), byte(i >> 32), byte(i >> 40), byte(i >> 48), byte(i >> 56)})
-}
-
-func (bm *baseMaker) writeAt(data []byte, offset int64) (int64, error) {
-	l, e := bm.f.WriteAt(data, offset)
+func (bm *baseMaker) Write(data interface{}) error {
+	b, e := toBin(data)
 	if e != nil {
-		return 0, e
+		return e
 	}
-	l64 := int64(l)
-	bm.next += l64
-	return l64, nil
+
+	l, e := bm.f.Write(b)
+	if e != nil {
+		return e
+	}
+
+	bm.next += int64(l)
+	return nil
 }
 
-func (bm *baseMaker) writeInt8At(n int64, offset int64) (int64, error) {
-	i := int8(n)
-	return bm.writeAt([]byte{byte(i)}, offset)
-}
-
-func (bm *baseMaker) writeInt16At(n int64, offset int64) (int64, error) {
-	i := int16(n)
-	return bm.writeAt([]byte{byte(i), byte(i >> 8)}, offset)
-}
-
-func (bm *baseMaker) writeInt32At(n int64, offset int64) (int64, error) {
-	i := int32(n)
-	return bm.writeAt([]byte{byte(i), byte(i >> 8), byte(i >> 16), byte(i >> 24)}, offset)
-}
-
-func (bm *baseMaker) writeInt64At(i int64, offset int64) (int64, error) {
-	return bm.writeAt([]byte{byte(i), byte(i >> 8), byte(i >> 16), byte(i >> 24), byte(i >> 32), byte(i >> 40), byte(i >> 48), byte(i >> 56)}, offset)
+func (bm *baseMaker) writeAt(data interface{}, offset int64) error {
+	b, e := toBin(data)
+	if e != nil {
+		return e
+	}
+	_, e = bm.f.WriteAt(b, offset)
+	if e != nil {
+		return e
+	}
+	return nil
 }
 
 func (bm *baseMaker) Label(key string) {
@@ -105,6 +100,11 @@ const(
 )
 
 func (bm *baseMaker) WriteRelative(startLabel string, endLabel string, offset int64, bit uint8) error {
+	err := bm.Write(make([]byte, bit, bit))
+	if err != nil {
+		return err
+	}
+
 	bm.pits = append(bm.pits, pit{
 		addr: bm.next,
 		start: startLabel,
@@ -112,8 +112,8 @@ func (bm *baseMaker) WriteRelative(startLabel string, endLabel string, offset in
 		offset: offset,
 		bit: bit,
 	})
-	_, err := bm.Write(make([]byte, bit, bit))
-	return err
+
+	return nil
 }
 
 func (bm *baseMaker) WriteFilePointer(mark string, bit uint8) error {
@@ -139,13 +139,13 @@ func (bm *baseMaker) Close() error {
 		n := end - start + bm.pits[i].offset
 		switch bm.pits[i].bit {
 			case BIT_8:
-				bm.writeInt8At(n, bm.pits[i].addr)
+				bm.writeAt(int8(n), bm.pits[i].addr)
 			case BIT_16:
-				bm.writeInt16At(n, bm.pits[i].addr)
+				bm.writeAt(int16(n), bm.pits[i].addr)
 			case BIT_32:
-				bm.writeInt32At(n, bm.pits[i].addr)
+				bm.writeAt(int32(n), bm.pits[i].addr)
 			case BIT_64:
-				bm.writeInt64At(n, bm.pits[i].addr)
+				bm.writeAt(n, bm.pits[i].addr)
 		}
 	}
 	return bm.f.Close()
