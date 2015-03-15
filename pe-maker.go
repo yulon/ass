@@ -1,5 +1,9 @@
 package ass
 
+import (
+	"time"
+)
+
 type PEMaker struct{
 	*baseMaker
 	BinLibs map[string]string
@@ -62,7 +66,13 @@ func (pe *PEMaker) WriteNTHeader() {
 }
 
 func (pe *PEMaker) writeFileHeader() {
-
+	pe.WriteInt16(PE_IMAGE_FILE_MACHINE_I386) // Machine
+	pe.WriteInt16(1) // NumberOfSections
+	pe.WriteInt32(time.Now().Unix()) // TimeDateStamp
+	pe.WriteInt32(0) // PointerToSymbolTable
+	pe.WriteInt32(0) // NumberOfSymbols
+	pe.WriteInt16(224) // SizeOfOptionalHeader
+	pe.WriteInt16(PE_IMAGE_FILE_EXECUTABLE_IMAGE | PE_IMAGE_FILE_LINE_NUMS_STRIPPED | PE_IMAGE_FILE_LOCAL_SYMS_STRIPPED | PE_IMAGE_FILE_LARGE_ADDRESS_AWARE | PE_IMAGE_FILE_32BIT_MACHINE | PE_IMAGE_FILE_DEBUG_STRIPPED) // Characteristics
 }
 
 func (pe *PEMaker) writeOptionalHeader() {
