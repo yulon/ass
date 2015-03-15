@@ -93,7 +93,7 @@ func (bm *baseMaker) writeInt64At(i int64, offset int64) (int64, error) {
 	return bm.writeAt([]byte{byte(i), byte(i >> 8), byte(i >> 16), byte(i >> 24), byte(i >> 32), byte(i >> 40), byte(i >> 48), byte(i >> 56)}, offset)
 }
 
-func (bm *baseMaker) Mark(key string) {
+func (bm *baseMaker) Label(key string) {
 	bm.marks[key] = bm.next
 }
 
@@ -104,11 +104,11 @@ const(
 	BIT_64 = 8
 )
 
-func (bm *baseMaker) WriteRelative(startMark string, endMark string, offset int64, bit uint8) error {
+func (bm *baseMaker) WriteRelative(startLabel string, endLabel string, offset int64, bit uint8) error {
 	bm.pits = append(bm.pits, pit{
 		addr: bm.next,
-		start: startMark,
-		end: endMark,
+		start: startLabel,
+		end: endLabel,
 		offset: offset,
 		bit: bit,
 	})

@@ -59,7 +59,7 @@ func (pe *PEMaker) WriteDOSHeader() { // 64字节
 }
 
 func (pe *PEMaker) WriteNTHeader() { // 248字节
-	pe.Mark("NTHeaders")
+	pe.Label("NTHeaders")
 	pe.WriteString(PE_IMAGE_NT_SIGNATURE)
 	pe.writeFileHeader()
 	pe.writeOptionalHeader32()
