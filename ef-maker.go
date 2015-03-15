@@ -1,6 +1,6 @@
 package ass
 
-type Maker interface{
+type ExecutableFileMaker interface{
 	Write([]byte) (int, error)
 	Mark(string)
 	WriteMemoryAddress(string, uint8)
