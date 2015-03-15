@@ -28,7 +28,7 @@ func (pe *PEMaker) WriteMemoryAddress(mark string, bit uint8) error {
 	return pe.WriteRelative("BinStart", mark, PE_ADDRESS_IMAGE_BASE + PE_ADDRESS_IMAGE_BIN_BASE, bit)
 }
 
-func (pe *PEMaker) WriteDOSHeader() {
+func (pe *PEMaker) WriteDOSHeader() { // 64字节
 	pe.WriteString("MZ") // e_magic
 	pe.WriteInt16(128) // e_cblp
 	pe.WriteInt16(1) // e_cp
