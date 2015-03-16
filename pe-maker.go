@@ -20,7 +20,7 @@ func NewPEMaker(path string) (*PEMaker, error) {
 	}, err
 }
 
-func (pe *PEMaker) WriteRelativeVirtualAddress(mark string, bit uint8) error {
+func (pe *PEMaker) WriteVirtualAddress(mark string, bit uint8) error {
 	return pe.WriteRelative("BinStart", mark, PE_ADDRESS_IMAGE_BIN_BASE, bit)
 }
 
@@ -110,7 +110,7 @@ func (pe *PEMaker) writeOptionalHeader32() { // 224字节。Magic~标准域，Im
 	for i := 0; i < 16; i++ {
 		// IMAGE_DATA_DIRECTORY
 		if i == PE_IMAGE_DIRECTORY_ENTRY_IMPORT {
-			pe.WriteRelativeVirtualAddress("ImportDescriptors", BIT_32) // VirtualAddress
+			pe.WriteVirtualAddress("ImportDescriptors", BIT_32) // VirtualAddress
 			pe.Write(uint32(40)) // Size
 		}else{
 			pe.Write(uint32(0)) // VirtualAddress
