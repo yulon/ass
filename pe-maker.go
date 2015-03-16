@@ -3,12 +3,11 @@ package ass
 import (
 	"time"
 	"errors"
-	"bytes"
 )
 
 type PEMaker struct{
 	*baseMaker
-	Imps map[string]string
+	imps map[string][]string
 }
 
 func NewPEMaker(path string) (*PEMaker, error) {
@@ -18,7 +17,7 @@ func NewPEMaker(path string) (*PEMaker, error) {
 	}
 	return &PEMaker{
 		baseMaker: f,
-		Imps: map[string]string{},
+		imps: map[string][]string{},
 	}, err
 }
 
@@ -62,7 +61,7 @@ func (pe *PEMaker) WriteDOSHeader() { // 64字节
 
 func (pe *PEMaker) WriteNTHeader() { // 248字节
 	pe.Label("NTHeaders")
-	pe.Write(PE_IMAGE_NT_SIGNATURE)
+	pe.Write(append([]byte(PE_IMAGE_NT_SIGNATURE), 0, 0))
 	pe.writeFileHeader()
 	pe.writeOptionalHeader32()
 }
@@ -88,8 +87,8 @@ func (pe *PEMaker) writeOptionalHeader32() { // 224字节。Magic~标准域，Im
 	pe.Write(uint32(PE_VA_SECTION)) // BaseOfCode
 	pe.Write(uint32(PE_VA_SECTION)) // BaseOfData
 	pe.Write(uint32(PE_MA_BASE)) // ImageBase
-	pe.Write(uint32(4096)) // SectionAlignment
-	pe.Write(uint32(512)) // FileAlignment
+	pe.Write(uint32(PE_ALIGNMENT_IMAGE)) // SectionAlignment
+	pe.Write(uint32(PE_ALIGNMENT_FILE)) // FileAlignment
 	pe.Write(uint16(5)) // MajorOperatingSystemVersion
 	pe.Write(uint16(1)) // MinorOperatingSystemVersion
 	pe.Write(uint16(0)) // MajorImageVersion
@@ -126,12 +125,12 @@ var SectionNameExceeded = errors.New("Section Name Exceeded 8 Characters")
 func (pe *PEMaker) WriteSectionHeader(name string) error {
 	l, _ := pe.Write(name) // Name
 	if l < 8 {
-		pe.Write(bytes.Repeat([]byte{0}, 8 - l))
+		pe.WriteSpace(8 - l)
 	}else if l > 8 {
 		return SectionNameExceeded
 	}
 	pe.WriteRelative("SectionStart", "SectionEnd", 0, BIT_32) // VirtualSize
-	pe.Write(PE_VA_SECTION) // VirtualAddress
+	pe.Write(int32(PE_VA_SECTION)) // VirtualAddress
 	pe.WriteRelative("SectionStart", "SectionAlignEnd", 0, BIT_32) // SizeOfRawData
 	pe.WriteFilePointer("SectionStart", BIT_32) // PointerToRawData
 	pe.Write(uint32(0)) // PointerToRelocations
@@ -140,4 +139,56 @@ func (pe *PEMaker) WriteSectionHeader(name string) error {
 	pe.Write(uint16(0)) // NumberOfLinenumbers
 	pe.Write(uint32(PE_IMAGE_SCN_CNT_CODE | PE_IMAGE_SCN_MEM_EXECUTE | PE_IMAGE_SCN_MEM_READ | PE_IMAGE_SCN_CNT_INITIALIZED_DATA)) // Characteristics
 	return nil
+}
+
+func (pe *PEMaker) SectionStart() {
+	m := pe.Len() % PE_ALIGNMENT_FILE
+	if m > 0 {
+		pe.WriteSpace(int(PE_ALIGNMENT_FILE - m))
+	}
+	pe.Label("SectionStart")
+
+}
+
+func (pe *PEMaker) SectionEnd() {
+	pe.Label("SectionEnd")
+	m := pe.Len() % PE_ALIGNMENT_FILE
+	if m > 0 {
+		pe.WriteSpace(int(PE_ALIGNMENT_FILE - m))
+	}
+	pe.Label("SectionAlignEnd")
+}
+
+func (pe *PEMaker) Import(dll string, function string) {
+	pe.imps[dll] = append(pe.imps[dll], function)
+}
+
+func (pe *PEMaker) WriteImportDescriptors() {
+	pe.Label("ImportDescriptors")
+	for dll, _ := range pe.imps { // 输出 IMAGE_IMPORT_DESCRIPTOR 数组
+		pe.WriteVirtualAddress("Imp.Lib." + dll + ".Thunk", BIT_32) // OriginalFirstThunk
+		pe.Write(uint32(0)) // TimeDateStamp
+		pe.Write(uint32(0)) // ForwarderChain
+		pe.WriteVirtualAddress("Imp.Lib." + dll + ".Name", BIT_32) // Name
+		pe.WriteVirtualAddress("Imp.Lib." + dll + ".Thunk", BIT_32) // FirstThunk
+	}
+	pe.WriteSpace(20) // 尾 IMAGE_IMPORT_DESCRIPTOR
+
+	for dll, funcs := range pe.imps {
+		pe.Label("Imp.Lib." + dll + ".Name")
+		pe.Write(append([]byte(dll), 0))
+
+		pe.Label("Imp.Lib." + dll + ".Thunk")
+		for i := 0; i < len(funcs); i++ {
+			pe.Label("Imp.Func." + funcs[i])
+			pe.WriteVirtualAddress("Imp.Func." + funcs[i] + ".Name", BIT_32)
+		}
+		pe.Write(uint32(0)) // 结尾
+
+		for i := 0; i < len(funcs); i++ {
+			pe.Label("Imp.Func." + funcs[i] + ".Name")
+			pe.Write(uint16(i))
+			pe.Write(append([]byte(funcs[i]), 0))
+		}
+	}
 }
