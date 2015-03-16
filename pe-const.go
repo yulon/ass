@@ -1,29 +1,30 @@
 package ass
 
 const(
-	PE_ADDRESS_IMAGE_BASE = 4194304
-	PE_ADDRESS_IMAGE_BIN_BASE = 4096
+	PE_BASE_IMAGE = 0x00400000
+	PE_BASE_TAD = 0x00001000
 
 	PE_IMAGE_NT_SIGNATURE = "PE00"
 
-	PE_IMAGE_FILE_RELOCS_STRIPPED = 1 // 文件中不存在重定位信息
-	PE_IMAGE_FILE_EXECUTABLE_IMAGE = 2 // 文件是可执行的
-	PE_IMAGE_FILE_LINE_NUMS_STRIPPED = 4 // 不存在行信息
-	PE_IMAGE_FILE_LOCAL_SYMS_STRIPPED = 8 // 不存在符号信息
-	PE_IMAGE_FILE_AGGRESIVE_WS_TRIM = 16 // 让操作系统强制整理工作区
-	PE_IMAGE_FILE_LARGE_ADDRESS_AWARE = 32 // 应用程序可以处理大于2GB的地址空间
+	PE_IMAGE_FILE_MACHINE_I386 = 0x014c // x86 CPU
+	PE_IMAGE_FILE_MACHINE_IA64 = 0x0200 // x64 CPU
+
+	PE_IMAGE_FILE_RELOCS_STRIPPED = 0x0001 // 文件中不存在重定位信息
+	PE_IMAGE_FILE_EXECUTABLE_IMAGE = 0x0002 // 文件是可执行的
+	PE_IMAGE_FILE_LINE_NUMS_STRIPPED = 0x0004 // 不存在行信息
+	PE_IMAGE_FILE_LOCAL_SYMS_STRIPPED = 0x0008 // 不存在符号信息
+	PE_IMAGE_FILE_AGGRESIVE_WS_TRIM = 0x0010 // 让操作系统强制整理工作区
+	PE_IMAGE_FILE_LARGE_ADDRESS_AWARE = 0x0020 // 应用程序可以处理大于2GB的地址空间
 //	PE_IMAGE_FILE_??? = 64 // 保留，留以后扩展
-	PE_IMAGE_FILE_BYTES_REVERSED_LO = 128 // 小尾方式
-	PE_IMAGE_FILE_32BIT_MACHINE = 256 // 只在32位平台上运行
-	PE_IMAGE_FILE_DEBUG_STRIPPED = 512 // 不包含调试信息。调试信息位于一个 .DBG 文件中
-	PE_IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP = 1024 // 如果映像在可移动媒体中，那么复制到交换文件并从交换文件中运行
-	PE_IMAGE_FILE_NET_RUN_FROM_SWAP = 2048 // 如果映像在网络上，那么复制到交换文件并从交换文件中运行
-	PE_IMAGE_FILE_SYSTEM = 4096 // 系统文件（如驱动程序），不能直接运行
-	PE_IMAGE_FILE_DLL = 8192 // 这是一个 DLL 文件
-	PE_IMAGE_FILE_UP_SYSTEM_ONLY = 16384 // 只能在单处理器机器中运行
-	PE_IMAGE_FILE_BYTES_REVERSED_HI = 32768 // 大尾方式
-	PE_IMAGE_FILE_MACHINE_I386 = 332 // x86 CPU
-	PE_IMAGE_FILE_MACHINE_IA64 = 512 // x64 CPU
+	PE_IMAGE_FILE_BYTES_REVERSED_LO = 0x0080 // 小尾方式
+	PE_IMAGE_FILE_32BIT_MACHINE = 0x0100 // 只在32位平台上运行
+	PE_IMAGE_FILE_DEBUG_STRIPPED = 0x0200 // 不包含调试信息。调试信息位于一个 .DBG 文件中
+	PE_IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP = 0x0400 // 如果映像在可移动媒体中，那么复制到交换文件并从交换文件中运行
+	PE_IMAGE_FILE_NET_RUN_FROM_SWAP = 0x0800 // 如果映像在网络上，那么复制到交换文件并从交换文件中运行
+	PE_IMAGE_FILE_SYSTEM = 0x1000 // 系统文件（如驱动程序），不能直接运行
+	PE_IMAGE_FILE_DLL = 0x2000 // 这是一个 DLL 文件
+	PE_IMAGE_FILE_UP_SYSTEM_ONLY = 0x4000 // 只能在单处理器机器中运行
+	PE_IMAGE_FILE_BYTES_REVERSED_HI = 0x8000 // 大尾方式
 
 	PE_IMAGE_DIRECTORY_ENTRY_EXPORT = 0 // 指向导出表（IMAGE_EXPORT_DIRECTORY）
 	PE_IMAGE_DIRECTORY_ENTRY_IMPORT = 1 // 指向导入表（IMAGE_IMPORT_DESCRIPTOR 数组）
@@ -46,13 +47,13 @@ const(
 
 	PE_IMAGE_NUMBEROF_DIRECTORY_ENTRIES = 16
 
-	PE_IMAGE_SCN_CNT_CODE = 32 // 节中包含代码
-	PE_IMAGE_SCN_MEM_EXECUTE = 536870912 // 节是可执行的
-	PE_IMAGE_SCN_CNT_INITIALIZED_DATA = 64 // 节中包含已初始化数据
-	PE_IMAGE_SCN_CNT_UNINITIALIZED_DATA = 128 // 节中包含未初始化数据
-	PE_IMAGE_SCN_MEM_DISCARDABLE = 33554432 // 节可被丢弃。用于保存链接器使用的一些信息，包括.debug$节
-	PE_IMAGE_SCN_MEM_NOT_PAGED = 134217728 // 节不可被页交换，因此它总是存在于物理内存中。经常用于内核模式的驱动程序
-	PE_IMAGE_SCN_MEM_SHARED = 268435456 // 包含节的数据的物理内存页在所有用到这个可执行体的进程之间共享。因此，每个进程看到这个节中的数据值都是完全一样的。这对一个进程的所有实例之间共享全局变量很有用。要使一个节共享，可使用/section:name,S 链接器选项
-	PE_IMAGE_SCN_MEM_READ = 1073741824 // 节是可读的。几乎总是被设置
-	PE_IMAGE_SCN_MEM_WRITE = -2147483648 // 节是可写的
+	PE_IMAGE_SCN_CNT_CODE = 0x00000020 // 节中包含代码
+	PE_IMAGE_SCN_MEM_EXECUTE = 0x20000000 // 节是可执行的
+	PE_IMAGE_SCN_CNT_INITIALIZED_DATA = 0x00000040 // 节中包含已初始化数据
+	PE_IMAGE_SCN_CNT_UNINITIALIZED_DATA = 0x00000080 // 节中包含未初始化数据
+	PE_IMAGE_SCN_MEM_DISCARDABLE = 0x02000000 // 节可被丢弃。用于保存链接器使用的一些信息，包括.debug$节
+	PE_IMAGE_SCN_MEM_NOT_PAGED = 0x08000000 // 节不可被页交换，因此它总是存在于物理内存中。经常用于内核模式的驱动程序
+	PE_IMAGE_SCN_MEM_SHARED = 0x10000000 // 包含节的数据的物理内存页在所有用到这个可执行体的进程之间共享。因此，每个进程看到这个节中的数据值都是完全一样的。这对一个进程的所有实例之间共享全局变量很有用。要使一个节共享，可使用/section:name,S 链接器选项
+	PE_IMAGE_SCN_MEM_READ = 0x40000000 // 节是可读的。几乎总是被设置
+	PE_IMAGE_SCN_MEM_WRITE = 0x80000000 // 节是可写的
 )
