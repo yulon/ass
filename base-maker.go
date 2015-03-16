@@ -3,13 +3,14 @@ package ass
 import (
 	"os"
 	"errors"
+	"bytes"
 )
 
 type baseMaker struct{
 	f *os.File
-	marks map[string]int64
+	labels map[string]int64
 	pits []pit
-	next int64
+	leng int64
 }
 
 type pit struct{
@@ -27,8 +28,9 @@ func NewBaseMaker(path string) (*baseMaker, error) {
 	}
 	return &baseMaker{
 		f: f,
-		marks: map[string]int64{},
+		labels: map[string]int64{},
 		pits: []pit{},
+		leng: 0,
 	}, err
 }
 
@@ -72,8 +74,12 @@ func (bm *baseMaker) Write(data interface{}) (int, error) {
 		return 0, e
 	}
 
-	bm.next += int64(l)
+	bm.leng += int64(l)
 	return l, nil
+}
+
+func (bm *baseMaker) WriteSpace(count int) (int, error) {
+	return bm.Write(bytes.Repeat([]byte{0}, count))
 }
 
 func (bm *baseMaker) writeAt(data interface{}, offset int64) error {
@@ -86,12 +92,16 @@ func (bm *baseMaker) writeAt(data interface{}, offset int64) error {
 	if e != nil {
 		return e
 	}
-	
+
 	return nil
 }
 
 func (bm *baseMaker) Label(key string) {
-	bm.marks[key] = bm.next
+	bm.labels[key] = bm.leng
+}
+
+func (bm *baseMaker) Len() int64 {
+	return bm.leng
 }
 
 const(
@@ -102,43 +112,47 @@ const(
 )
 
 func (bm *baseMaker) WriteRelative(startLabel string, endLabel string, offset int64, bit uint8) error {
-	_, err := bm.Write(make([]byte, bit, bit))
-	if err != nil {
-		return err
-	}
-
 	bm.pits = append(bm.pits, pit{
-		addr: bm.next,
+		addr: bm.leng,
 		start: startLabel,
 		end: endLabel,
 		offset: offset,
 		bit: bit,
 	})
-
-	return nil
+	_, err := bm.WriteSpace(int(bit))
+	return err
 }
 
-func (bm *baseMaker) WriteFilePointer(mark string, bit uint8) error {
-	return bm.WriteRelative("", mark, 0, bit)
+func (bm *baseMaker) WriteFilePointer(label string, bit uint8) error {
+	return bm.WriteRelative("", label, 0, bit)
 }
 
 func (bm *baseMaker) Close() error {
 	for i := 0; i < len(bm.pits); i++ {
 		var start, end int64
+		var ok bool
 
 		if bm.pits[i].start == "" {
 			start = 0
 		}else{
-			start = bm.marks[bm.pits[i].start]
+			start, ok = bm.labels[bm.pits[i].start]
+			if !ok {
+				bm.f.Close()
+				return errors.New(bm.pits[i].start + " is not found")
+			}
 		}
 
 		if bm.pits[i].end == "" {
 			end = bm.pits[i].addr
 		}else{
-			end = bm.marks[bm.pits[i].end]
+			end, ok = bm.labels[bm.pits[i].end]
+			if !ok {
+				bm.f.Close()
+				return errors.New(bm.pits[i].end + " is not found")
+			}
 		}
-
 		n := end - start + bm.pits[i].offset
+		//println(bm.pits[i].start, bm.pits[i].end, bm.labels[bm.pits[i].start], bm.labels[bm.pits[i].end], start, end)
 		switch bm.pits[i].bit {
 			case BIT_8:
 				bm.writeAt(int8(n), bm.pits[i].addr)
