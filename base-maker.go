@@ -61,19 +61,19 @@ func toBin(data interface{}) ([]byte, error) {
 	}
 }
 
-func (bm *baseMaker) Write(data interface{}) error {
+func (bm *baseMaker) Write(data interface{}) (int, error) {
 	b, e := toBin(data)
 	if e != nil {
-		return e
+		return 0, e
 	}
 
 	l, e := bm.f.Write(b)
 	if e != nil {
-		return e
+		return 0, e
 	}
 
 	bm.next += int64(l)
-	return nil
+	return l, nil
 }
 
 func (bm *baseMaker) writeAt(data interface{}, offset int64) error {
@@ -81,10 +81,12 @@ func (bm *baseMaker) writeAt(data interface{}, offset int64) error {
 	if e != nil {
 		return e
 	}
+
 	_, e = bm.f.WriteAt(b, offset)
 	if e != nil {
 		return e
 	}
+	
 	return nil
 }
 
@@ -100,7 +102,7 @@ const(
 )
 
 func (bm *baseMaker) WriteRelative(startLabel string, endLabel string, offset int64, bit uint8) error {
-	err := bm.Write(make([]byte, bit, bit))
+	_, err := bm.Write(make([]byte, bit, bit))
 	if err != nil {
 		return err
 	}

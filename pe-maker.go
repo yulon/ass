@@ -2,11 +2,13 @@ package ass
 
 import (
 	"time"
+	"errors"
+	"bytes"
 )
 
 type PEMaker struct{
 	*baseMaker
-	BinLibs map[string]string
+	Imps map[string]string
 }
 
 func NewPEMaker(path string) (*PEMaker, error) {
@@ -16,16 +18,16 @@ func NewPEMaker(path string) (*PEMaker, error) {
 	}
 	return &PEMaker{
 		baseMaker: f,
-		BinLibs: map[string]string{},
+		Imps: map[string]string{},
 	}, err
 }
 
 func (pe *PEMaker) WriteVirtualAddress(mark string, bit uint8) error {
-	return pe.WriteRelative("BinStart", mark, PE_ADDRESS_IMAGE_BIN_BASE, bit)
+	return pe.WriteRelative("SectionStart", mark, PE_VA_SECTION, bit)
 }
 
 func (pe *PEMaker) WriteMemoryAddress(mark string, bit uint8) error {
-	return pe.WriteRelative("BinStart", mark, PE_ADDRESS_IMAGE_BASE + PE_ADDRESS_IMAGE_BIN_BASE, bit)
+	return pe.WriteRelative("SectionStart", mark, PE_MA_BASE + PE_VA_SECTION, bit)
 }
 
 func (pe *PEMaker) WriteDOSHeader() { // 64字节
@@ -79,13 +81,13 @@ func (pe *PEMaker) writeOptionalHeader32() { // 224字节。Magic~标准域，Im
 	pe.Write(uint16(267)) // Magic
 	pe.Write(uint8(1)) // MajorLinkerVersion
 	pe.Write(uint8(0)) // MinerLinkerVersion
-	pe.WriteRelative("BinStart", "BinEnd", 0, BIT_32) // SizeOfCode
+	pe.WriteRelative("SectionStart", "SectionEnd", 0, BIT_32) // SizeOfCode
 	pe.Write(uint32(0)) // SizeOfInitializedData
 	pe.Write(uint32(0)) // SizeOfUnInitializedData
-	pe.Write(uint32(PE_ADDRESS_IMAGE_BIN_BASE)) // AddressOfEntryPoint
-	pe.Write(uint32(PE_ADDRESS_IMAGE_BIN_BASE)) // BaseOfCode
-	pe.Write(uint32(PE_ADDRESS_IMAGE_BIN_BASE)) // BaseOfData
-	pe.Write(uint32(PE_ADDRESS_IMAGE_BASE)) // ImageBase
+	pe.Write(uint32(PE_VA_SECTION)) // AddressOfEntryPoint
+	pe.Write(uint32(PE_VA_SECTION)) // BaseOfCode
+	pe.Write(uint32(PE_VA_SECTION)) // BaseOfData
+	pe.Write(uint32(PE_MA_BASE)) // ImageBase
 	pe.Write(uint32(4096)) // SectionAlignment
 	pe.Write(uint32(512)) // FileAlignment
 	pe.Write(uint16(5)) // MajorOperatingSystemVersion
@@ -95,8 +97,8 @@ func (pe *PEMaker) writeOptionalHeader32() { // 224字节。Magic~标准域，Im
 	pe.Write(uint16(5)) // MajorSubsystemVersion
 	pe.Write(uint16(1)) // MinorSubsystemVersion
 	pe.Write(uint32(0)) // Win32VersionValue
-	pe.WriteRelative("BinStart", "BinEnd", 0, BIT_32) // SizeOfImage
-	pe.WriteFilePointer("BinStart", BIT_32) // SizeOfHeaders
+	pe.WriteRelative("SectionStart", "SectionAlignEnd", PE_VA_SECTION, BIT_32) // SizeOfImage
+	pe.WriteFilePointer("SectionStart", BIT_32) // SizeOfHeaders
 	pe.Write(uint32(0)) // CheckSum
 	pe.Write(uint16(PE_IMAGE_SUBSYSTEM_WINDOWS_CUI)) // Subsystem
 	pe.Write(uint16(0)) // DllCharacteristics
@@ -117,4 +119,25 @@ func (pe *PEMaker) writeOptionalHeader32() { // 224字节。Magic~标准域，Im
 			pe.Write(uint32(0)) // Size
 		}
 	}
+}
+
+var SectionNameExceeded = errors.New("Section Name Exceeded 8 Characters")
+
+func (pe *PEMaker) WriteSectionHeader(name string) error {
+	l, _ := pe.Write(name) // Name
+	if l < 8 {
+		pe.Write(bytes.Repeat([]byte{0}, 8 - l))
+	}else if l > 8 {
+		return SectionNameExceeded
+	}
+	pe.WriteRelative("SectionStart", "SectionEnd", 0, BIT_32) // VirtualSize
+	pe.Write(PE_VA_SECTION) // VirtualAddress
+	pe.WriteRelative("SectionStart", "SectionAlignEnd", 0, BIT_32) // SizeOfRawData
+	pe.WriteFilePointer("SectionStart", BIT_32) // PointerToRawData
+	pe.Write(uint32(0)) // PointerToRelocations
+	pe.Write(uint32(0)) // PointerToLinenumbers
+	pe.Write(uint16(0)) // NumberOfRelocations
+	pe.Write(uint16(0)) // NumberOfLinenumbers
+	pe.Write(uint32(PE_IMAGE_SCN_CNT_CODE | PE_IMAGE_SCN_MEM_EXECUTE | PE_IMAGE_SCN_MEM_READ | PE_IMAGE_SCN_CNT_INITIALIZED_DATA)) // Characteristics
+	return nil
 }
