@@ -11,13 +11,13 @@ func Test_PE32(t *testing.T) {
 	exe.ImpBinLibFunc("kernel32.dll", "ExitProcess")
 	exe.ImpBinLibFunc("msvcrt.dll", "printf")
 
-	exe.Write([]byte{104}) // PUSH
+	exe.Write([]byte{104}) // push _
 	exe.WriteVA("hw", Bit32)
 
-	exe.Write([]byte{255, 21}) // CALL PTR
+	exe.Write([]byte{255, 21}) // call [_]
 	exe.WriteBinlibFuncPtr("printf")
 
-	exe.Write([]byte{255, 21}) // CALL PTR
+	exe.Write([]byte{255, 21}) // call [_]
 	exe.WriteBinlibFuncPtr("ExitProcess")
 
 	exe.Label("hw")
@@ -32,6 +32,19 @@ func Test_PE64(t *testing.T) {
 
 	exe.ImpBinLibFunc("kernel32.dll", "ExitProcess")
 	exe.ImpBinLibFunc("msvcrt.dll", "printf")
+
+	exe.Write([]byte{72, 185});  // mov rcx, _
+	exe.WriteVA("hw", Bit64)
+
+	exe.Write([]byte{255, 20, 37}) // call [_]
+	exe.WriteBinlibFuncPtr("printf")
+
+	exe.Write([]byte{255, 20, 37}) // call [_]
+	exe.WriteBinlibFuncPtr("ExitProcess")
+
+	exe.Label("hw")
+	exe.Write("Hello, World!\r\n")
+	exe.Write(byte(0))
 
 	fmt.Println(exe.Close())
 }
