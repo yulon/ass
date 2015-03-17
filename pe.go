@@ -56,31 +56,7 @@ func (pe *PE) WriteVA(mark string, bit int) {
 
 func (pe *PE) writeDOSHeader() { // 64字节
 	pe.Write("MZ") // e_magic
-	pe.WriteStrict(128, Bit16) // e_cblp
-	pe.WriteStrict(1, Bit16) // e_cp
-	pe.WriteStrict(0, Bit16) // e_crlc
-	pe.WriteStrict(4, Bit16) // e_cparhdr
-	pe.WriteStrict(0, Bit16) // e_minalloc
-	pe.WriteStrict(65535, Bit16) // e_maxalloc
-	pe.WriteStrict(0, Bit16) // e_ss
-	pe.WriteStrict(0, Bit16) // e_sp
-	pe.WriteStrict(0, Bit16) // e_csum
-	pe.WriteStrict(0, Bit16) // e_ip
-	pe.WriteStrict(0, Bit16) // e_cs
-	pe.WriteStrict(64, Bit16) // e_lfarlc
-	pe.WriteStrict(0, Bit16) // e_ovno
-
-	for i := 0; i < 4; i++ {
-		pe.WriteStrict(0, Bit16) // e_res
-	}
-
-	pe.WriteStrict(0, Bit16) // e_oemid
-	pe.WriteStrict(0, Bit16) // e_oeminfo
-
-	for i := 0; i < 10; i++ {
-		pe.WriteStrict(0, Bit16) // e_res
-	}
-
+	pe.WriteSpace(58)
 	pe.WritePointer("NTHeaders", Bit32) // e_lfanew
 }
 
@@ -102,11 +78,12 @@ func (pe *PE) writeFileHeader() { // 20字节
 	pe.WriteStrict(time.Now().Unix(), Bit32) // TimeDateStamp
 	pe.WriteStrict(0, Bit32) // PointerToSymbolTable
 	pe.WriteStrict(0, Bit32) // NumberOfSymbols
-	pe.WriteStrict(224, Bit16) // SizeOfOptionalHeader
+	pe.WriteDifference("OptionalHeaderStart", "OptionalHeaderEnd", 0, Bit16) // SizeOfOptionalHeader
 	pe.WriteStrict(pe_IMAGE_FILE_EXECUTABLE_IMAGE | pe_IMAGE_FILE_LINE_NUMS_STRIPPED | pe_IMAGE_FILE_LOCAL_SYMS_STRIPPED | pe_IMAGE_FILE_LARGE_ADDRESS_AWARE | pe_IMAGE_FILE_DEBUG_STRIPPED, Bit16) // Characteristics
 }
 
-func (pe *PE) writeOptionalHeader() { // 224字节。Magic~标准域，ImageBase~NT附加域
+func (pe *PE) writeOptionalHeader() {
+	pe.Label("OptionalHeaderStart")
 	switch pe.cpu {
 		case MACHINE_X86:
 			pe.WriteStrict(pe_IMAGE_NT_OPTIONAL_HDR32_MAGIC, Bit16) // Magic
@@ -159,6 +136,7 @@ func (pe *PE) writeOptionalHeader() { // 224字节。Magic~标准域，ImageBase
 			pe.WriteStrict(0, Bit32) // Size
 		}
 	}
+	pe.Label("OptionalHeaderEnd")
 }
 
 func (pe *PE) writeSectionHeader() error {
