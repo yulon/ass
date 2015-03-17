@@ -12,5 +12,5 @@ func NewX86Writer(m ExecutableFileMaker) *X86Writer {
 
 func (x86 *X86Writer) JMP(key string) {
 	x86.m.Write([]byte{255})
-	x86.m.WriteMemoryAddress(key, BIT_32)
+	x86.m.WriteMemoryAddress(key, Bit32)
 }

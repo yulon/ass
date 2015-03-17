@@ -8,7 +8,7 @@ func Test_PE32(t *testing.T) {
 	exe, _ := NewPEMaker("pe32_test.exe")
 	exe.WriteDOSHeader()
 	exe.WriteNTHeader()
-	exe.WriteSectionHeader(".one")
+	exe.WriteSectionHeader()
 	exe.SectionStart()
 	exe.Import("kernel32.dll", "ExitProcess")
 	exe.Import("msvcrt.dll", "printf")
