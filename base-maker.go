@@ -70,7 +70,7 @@ func (bm *baseMaker) Write(data interface{}) {
 	bm.leng += int64(l)
 }
 
-func (bm *baseMaker) WriteSolid(data interface{}, size int) {
+func (bm *baseMaker) WriteStrict(data interface{}, size int) {
 	b := bin(data)
 	l := len(b)
 	if l < size {
