@@ -201,7 +201,8 @@ func (pe *PE) writeImportDescriptors() {
 
 	for dll, funcs := range pe.imps {
 		pe.Label("Imp.Lib." + dll + ".Name")
-		pe.WriteStrict(dll, len(dll) + 1)
+		pe.Write(dll)
+		pe.Write(byte(0))
 
 		pe.Label("Imp.Lib." + dll + ".Thunk")
 		for i := 0; i < len(funcs); i++ {
@@ -213,7 +214,8 @@ func (pe *PE) writeImportDescriptors() {
 		for i := 0; i < len(funcs); i++ {
 			pe.Label("Imp.Func." + funcs[i] + ".Name")
 			pe.WriteStrict(i, Bit16)
-			pe.WriteStrict(funcs[i], len(funcs[i]) + 1)
+			pe.Write(funcs[i])
+			pe.Write(byte(0))
 		}
 	}
 }
