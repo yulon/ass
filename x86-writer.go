@@ -1,5 +1,7 @@
 package ass
 
+const CPU_X86 = 32
+
 type X86Writer struct{
 	m ExecutableFileMaker
 }

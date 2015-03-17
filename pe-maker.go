@@ -7,28 +7,43 @@ import (
 type PEMaker struct{
 	*baseMaker
 	imps map[string][]string
+	imgBase int64
+	cui bool
 }
 
-func NewPEMaker(path string) (*PEMaker, error) {
+func NewPEMaker(path string, cpu int, imageBase int64, console bool) (*PEMaker, error) {
 	f, err := NewBaseMaker(path)
 	if err != nil {
 		return nil, err
 	}
-	return &PEMaker{
+	pe := &PEMaker{
 		baseMaker: f,
 		imps: map[string][]string{},
-	}, err
+		imgBase: imageBase,
+		cui: console,
+	}
+	pe.writeDOSHeader()
+	pe.writeNTHeader()
+	pe.writeSectionHeader()
+	pe.sectionStart()
+	return pe, err
+}
+
+func (pe *PEMaker) Close() error {
+	pe.writeImportDescriptors()
+	pe.sectionEnd()
+	return pe.baseMaker.Close()
 }
 
 func (pe *PEMaker) WriteRVA(mark string, bit int) {
-	pe.WriteDifference("SectionStart", mark, PE_RVA_SECTION, bit)
+	pe.WriteDifference("SectionStart", mark, pe_RVA_SECTION, bit)
 }
 
 func (pe *PEMaker) WriteVA(mark string, bit int) {
-	pe.WriteDifference("SectionStart", mark, PE_VA_BASE + PE_RVA_SECTION, bit)
+	pe.WriteDifference("SectionStart", mark, pe.imgBase + pe_RVA_SECTION, bit)
 }
 
-func (pe *PEMaker) WriteDOSHeader() { // 64字节
+func (pe *PEMaker) writeDOSHeader() { // 64字节
 	pe.Write("MZ") // e_magic
 	pe.WriteStrict(128, Bit16) // e_cblp
 	pe.WriteStrict(1, Bit16) // e_cp
@@ -58,21 +73,21 @@ func (pe *PEMaker) WriteDOSHeader() { // 64字节
 	pe.WritePointer("NTHeaders", Bit32) // e_lfanew
 }
 
-func (pe *PEMaker) WriteNTHeader() { // 248字节
+func (pe *PEMaker) writeNTHeader() { // 248字节
 	pe.Label("NTHeaders")
-	pe.WriteStrict(PE_IMAGE_NT_SIGNATURE, Bit32)
+	pe.WriteStrict(pe_IMAGE_NT_SIGNATURE, Bit32)
 	pe.writeFileHeader()
 	pe.writeOptionalHeader32()
 }
 
 func (pe *PEMaker) writeFileHeader() { // 20字节
-	pe.WriteStrict(PE_IMAGE_FILE_MACHINE_I386, Bit16) // Machine
+	pe.WriteStrict(pe_IMAGE_FILE_MACHINE_I386, Bit16) // Machine
 	pe.WriteStrict(1, Bit16) // NumberOfSections
 	pe.WriteStrict(time.Now().Unix(), Bit32) // TimeDateStamp
 	pe.WriteStrict(0, Bit32) // PointerToSymbolTable
 	pe.WriteStrict(0, Bit32) // NumberOfSymbols
 	pe.WriteStrict(224, Bit16) // SizeOfOptionalHeader
-	pe.WriteStrict(PE_IMAGE_FILE_EXECUTABLE_IMAGE | PE_IMAGE_FILE_LINE_NUMS_STRIPPED | PE_IMAGE_FILE_LOCAL_SYMS_STRIPPED | PE_IMAGE_FILE_LARGE_ADDRESS_AWARE | PE_IMAGE_FILE_32BIT_MACHINE | PE_IMAGE_FILE_DEBUG_STRIPPED, Bit16) // Characteristics
+	pe.WriteStrict(pe_IMAGE_FILE_EXECUTABLE_IMAGE | pe_IMAGE_FILE_LINE_NUMS_STRIPPED | pe_IMAGE_FILE_LOCAL_SYMS_STRIPPED | pe_IMAGE_FILE_LARGE_ADDRESS_AWARE | pe_IMAGE_FILE_32BIT_MACHINE | pe_IMAGE_FILE_DEBUG_STRIPPED, Bit16) // Characteristics
 }
 
 func (pe *PEMaker) writeOptionalHeader32() { // 224字节。Magic~标准域，ImageBase~NT附加域
@@ -82,12 +97,12 @@ func (pe *PEMaker) writeOptionalHeader32() { // 224字节。Magic~标准域，Im
 	pe.WriteDifference("SectionStart", "SectionEnd", 0, Bit32) // SizeOfCode
 	pe.WriteStrict(0, Bit32) // SizeOfInitializedData
 	pe.WriteStrict(0, Bit32) // SizeOfUnInitializedData
-	pe.WriteStrict(PE_RVA_SECTION, Bit32) // AddressOfEntryPoint
-	pe.WriteStrict(PE_RVA_SECTION, Bit32) // BaseOfCode
-	pe.WriteStrict(PE_RVA_SECTION, Bit32) // BaseOfData
-	pe.WriteStrict(PE_VA_BASE, Bit32) // ImageBase
-	pe.WriteStrict(PE_ALIGNMENT_IMAGE, Bit32) // SectionAlignment
-	pe.WriteStrict(PE_ALIGNMENT_FILE, Bit32) // FileAlignment
+	pe.WriteStrict(pe_RVA_SECTION, Bit32) // AddressOfEntryPoint
+	pe.WriteStrict(pe_RVA_SECTION, Bit32) // BaseOfCode
+	pe.WriteStrict(pe_RVA_SECTION, Bit32) // BaseOfData
+	pe.WriteStrict(pe.imgBase, Bit32) // ImageBase
+	pe.WriteStrict(pe_ALIGNMENT_IMAGE, Bit32) // SectionAlignment
+	pe.WriteStrict(pe_ALIGNMENT_FILE, Bit32) // FileAlignment
 	pe.WriteStrict(5, Bit16) // MajorOperatingSystemVersion
 	pe.WriteStrict(1, Bit16) // MinorOperatingSystemVersion
 	pe.WriteStrict(0, Bit16) // MajorImageVersion
@@ -95,10 +110,14 @@ func (pe *PEMaker) writeOptionalHeader32() { // 224字节。Magic~标准域，Im
 	pe.WriteStrict(5, Bit16) // MajorSubsystemVersion
 	pe.WriteStrict(1, Bit16) // MinorSubsystemVersion
 	pe.WriteStrict(0, Bit32) // Win32VersionValue
-	pe.WriteDifference("SectionStart", "SectionAlignEnd", PE_RVA_SECTION, Bit32) // SizeOfImage
+	pe.WriteDifference("SectionStart", "SectionAlignEnd", pe_RVA_SECTION, Bit32) // SizeOfImage
 	pe.WritePointer("SectionStart", Bit32) // SizeOfHeaders
 	pe.WriteStrict(0, Bit32) // CheckSum
-	pe.WriteStrict(PE_IMAGE_SUBSYSTEM_WINDOWS_CUI, Bit16) // Subsystem
+	if pe.cui {
+		pe.WriteStrict(pe_IMAGE_SUBSYSTEM_WINDOWS_CUI, Bit16) // Subsystem
+	}else{
+		pe.WriteStrict(pe_IMAGE_SUBSYSTEM_WINDOWS_GUI, Bit16) // Subsystem
+	}
 	pe.WriteStrict(0, Bit16) // DllCharacteristics
 	pe.WriteStrict(65536, Bit32) // SizeOfStackReserve
 	pe.WriteStrict(4096, Bit32) // SizeOfStackCommit
@@ -109,7 +128,7 @@ func (pe *PEMaker) writeOptionalHeader32() { // 224字节。Magic~标准域，Im
 
 	for i := 0; i < 16; i++ {
 		// IMAGE_DATA_DIRECTORY
-		if i == PE_IMAGE_DIRECTORY_ENTRY_IMPORT {
+		if i == pe_IMAGE_DIRECTORY_ENTRY_IMPORT {
 			pe.WriteRVA("ImportDescriptors", Bit32) // VirtualAddress
 			pe.WriteStrict(40, Bit32) // Size
 		}else{
@@ -119,34 +138,33 @@ func (pe *PEMaker) writeOptionalHeader32() { // 224字节。Magic~标准域，Im
 	}
 }
 
-func (pe *PEMaker) WriteSectionHeader() error {
+func (pe *PEMaker) writeSectionHeader() error {
 	pe.WriteStrict(".codata", Bit64) // Name
 	pe.WriteDifference("SectionStart", "SectionEnd", 0, Bit32) // VirtualSize
-	pe.WriteStrict(PE_RVA_SECTION, Bit32) // VirtualAddress
+	pe.WriteStrict(pe_RVA_SECTION, Bit32) // VirtualAddress
 	pe.WriteDifference("SectionStart", "SectionAlignEnd", 0, Bit32) // SizeOfRawData
 	pe.WritePointer("SectionStart", Bit32) // PointerToRawData
 	pe.WriteStrict(0, Bit32) // PointerToRelocations
 	pe.WriteStrict(0, Bit32) // PointerToLinenumbers
 	pe.WriteStrict(0, Bit16) // NumberOfRelocations
 	pe.WriteStrict(0, Bit16) // NumberOfLinenumbers
-	pe.WriteStrict(PE_IMAGE_SCN_CNT_CODE | PE_IMAGE_SCN_MEM_EXECUTE | PE_IMAGE_SCN_MEM_READ | PE_IMAGE_SCN_CNT_INITIALIZED_DATA, Bit32) // Characteristics
+	pe.WriteStrict(pe_IMAGE_SCN_CNT_CODE | pe_IMAGE_SCN_MEM_EXECUTE | pe_IMAGE_SCN_MEM_READ | pe_IMAGE_SCN_CNT_INITIALIZED_DATA, Bit32) // Characteristics
 	return nil
 }
 
-func (pe *PEMaker) SectionStart() {
-	m := pe.Len() % PE_ALIGNMENT_FILE
+func (pe *PEMaker) sectionStart() {
+	m := pe.Len() % pe_ALIGNMENT_FILE
 	if m > 0 {
-		pe.WriteSpace(int(PE_ALIGNMENT_FILE - m))
+		pe.WriteSpace(int(pe_ALIGNMENT_FILE - m))
 	}
 	pe.Label("SectionStart")
-
 }
 
-func (pe *PEMaker) SectionEnd() {
+func (pe *PEMaker) sectionEnd() {
 	pe.Label("SectionEnd")
-	m := pe.Len() % PE_ALIGNMENT_FILE
+	m := pe.Len() % pe_ALIGNMENT_FILE
 	if m > 0 {
-		pe.WriteSpace(int(PE_ALIGNMENT_FILE - m))
+		pe.WriteSpace(int(pe_ALIGNMENT_FILE - m))
 	}
 	pe.Label("SectionAlignEnd")
 }
@@ -155,7 +173,11 @@ func (pe *PEMaker) Import(dll string, function string) {
 	pe.imps[dll] = append(pe.imps[dll], function)
 }
 
-func (pe *PEMaker) WriteImportDescriptors() {
+const(
+	peImportDescriptorSize = 20
+)
+
+func (pe *PEMaker) writeImportDescriptors() {
 	pe.Label("ImportDescriptors")
 	for dll, _ := range pe.imps { // 输出 IMAGE_IMPORT_DESCRIPTOR 数组
 		pe.WriteRVA("Imp.Lib." + dll + ".Thunk", Bit32) // OriginalFirstThunk
@@ -164,7 +186,7 @@ func (pe *PEMaker) WriteImportDescriptors() {
 		pe.WriteRVA("Imp.Lib." + dll + ".Name", Bit32) // Name
 		pe.WriteRVA("Imp.Lib." + dll + ".Thunk", Bit32) // FirstThunk
 	}
-	pe.WriteSpace(20) // 尾 IMAGE_IMPORT_DESCRIPTOR
+	pe.WriteSpace(peImportDescriptorSize) // 尾 IMAGE_IMPORT_DESCRIPTOR
 
 	for dll, funcs := range pe.imps {
 		pe.Label("Imp.Lib." + dll + ".Name")
