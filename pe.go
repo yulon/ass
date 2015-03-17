@@ -175,7 +175,7 @@ func (pe *PE) ImpBinLibFunc(dll string, function string) {
 }
 
 func (pe *PE) WriteBinlibFuncPtr(function string) {
-	pe.WriteVA("Imp.Func." + function, pe.cpu)
+	pe.WriteVA("Imp.Func." + function, Bit32)
 }
 
 func (pe *PE) writeImportDescriptors() {
@@ -197,9 +197,9 @@ func (pe *PE) writeImportDescriptors() {
 		pe.Label("Imp.Lib." + dll + ".Thunk")
 		for i := 0; i < len(funcs); i++ {
 			pe.Label("Imp.Func." + funcs[i])
-			pe.WriteRVA("Imp.Func." + funcs[i] + ".Name", Bit32)
+			pe.WriteRVA("Imp.Func." + funcs[i] + ".Name", pe.cpu)
 		}
-		pe.WriteSpace(Bit32) // 结尾
+		pe.WriteSpace(pe.cpu) // 结尾
 
 		for i := 0; i < len(funcs); i++ {
 			pe.Label("Imp.Func." + funcs[i] + ".Name")
