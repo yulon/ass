@@ -46,12 +46,12 @@ func (pe *PE) Close() error {
 	}
 }
 
-func (pe *PE) WriteRVA(mark string, bit int) {
-	pe.WriteDifference("SectionStart", mark, pe_RVA_SECTION, bit)
+func (pe *PE) WriteRVA(mark string) {
+	pe.WriteDifference("SectionStart", mark, pe_RVA_SECTION, Bit32)
 }
 
-func (pe *PE) WriteVA(mark string, bit int) {
-	pe.WriteDifference("SectionStart", mark, pe.imgBase + pe_RVA_SECTION, bit)
+func (pe *PE) WriteVA(mark string) {
+	pe.WriteDifference("SectionStart", mark, pe.imgBase + pe_RVA_SECTION, Bit32)
 }
 
 func (pe *PE) writeDOSHeader() { // 64字节
@@ -140,7 +140,7 @@ func (pe *PE) writeOptionalHeader32() { // 224字节。Magic~标准域，ImageBa
 	for i := 0; i < 16; i++ {
 		// IMAGE_DATA_DIRECTORY
 		if i == pe_IMAGE_DIRECTORY_ENTRY_IMPORT {
-			pe.WriteRVA("ImportDescriptors", Bit32) // VirtualAddress
+			pe.WriteRVA("ImportDescriptors") // VirtualAddress
 			pe.WriteStrict(40, Bit32) // Size
 		}else{
 			pe.WriteStrict(0, Bit32) // VirtualAddress
@@ -180,18 +180,22 @@ func (pe *PE) sectionEnd() {
 	pe.Label("SectionAlignEnd")
 }
 
-func (pe *PE) Import(dll string, function string) {
+func (pe *PE) ImpBinLibFunc(dll string, function string) {
 	pe.imps[dll] = append(pe.imps[dll], function)
+}
+
+func (pe *PE) WriteBinlibFuncPtr(function string) {
+	pe.WriteVA("Imp.Func." + function)
 }
 
 func (pe *PE) writeImportDescriptors() {
 	pe.Label("ImportDescriptors")
 	for dll, _ := range pe.imps { // 输出 IMAGE_IMPORT_DESCRIPTOR 数组
-		pe.WriteRVA("Imp.Lib." + dll + ".Thunk", Bit32) // OriginalFirstThunk
+		pe.WriteRVA("Imp.Lib." + dll + ".Thunk") // OriginalFirstThunk
 		pe.WriteStrict(0, Bit32) // TimeDateStamp
 		pe.WriteStrict(0, Bit32) // ForwarderChain
-		pe.WriteRVA("Imp.Lib." + dll + ".Name", Bit32) // Name
-		pe.WriteRVA("Imp.Lib." + dll + ".Thunk", Bit32) // FirstThunk
+		pe.WriteRVA("Imp.Lib." + dll + ".Name") // Name
+		pe.WriteRVA("Imp.Lib." + dll + ".Thunk") // FirstThunk
 	}
 	pe.WriteSpace(pe_IMPORT_DESCRIPTOR_SIZE) // 尾 IMAGE_IMPORT_DESCRIPTOR
 
@@ -202,7 +206,7 @@ func (pe *PE) writeImportDescriptors() {
 		pe.Label("Imp.Lib." + dll + ".Thunk")
 		for i := 0; i < len(funcs); i++ {
 			pe.Label("Imp.Func." + funcs[i])
-			pe.WriteRVA("Imp.Func." + funcs[i] + ".Name", Bit32)
+			pe.WriteRVA("Imp.Func." + funcs[i] + ".Name")
 		}
 		pe.WriteSpace(Bit32) // 结尾
 
