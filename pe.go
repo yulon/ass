@@ -46,12 +46,12 @@ func (pe *PE) Close() error {
 	}
 }
 
-func (pe *PE) WriteRVA(mark string) {
-	pe.WriteDifference("SectionStart", mark, pe_RVA_SECTION, Bit32)
+func (pe *PE) WriteRVA(mark string, bit int) {
+	pe.WriteDifference("SectionStart", mark, pe_RVA_SECTION, bit)
 }
 
-func (pe *PE) WriteVA(mark string) {
-	pe.WriteDifference("SectionStart", mark, pe.imgBase + pe_RVA_SECTION, Bit32)
+func (pe *PE) WriteVA(mark string, bit int) {
+	pe.WriteDifference("SectionStart", mark, pe.imgBase + pe_RVA_SECTION, bit)
 }
 
 func (pe *PE) writeDOSHeader() { // 64字节
@@ -86,23 +86,33 @@ func (pe *PE) writeDOSHeader() { // 64字节
 
 func (pe *PE) writeNTHeader() { // 248字节
 	pe.Label("NTHeaders")
-	pe.WriteStrict(pe_IMAGE_NT_SIGNATURE, Bit32)
+	pe.WriteStrict("PE", Bit32)
 	pe.writeFileHeader()
-	pe.writeOptionalHeader32()
+	pe.writeOptionalHeader()
 }
 
 func (pe *PE) writeFileHeader() { // 20字节
-	pe.WriteStrict(pe_IMAGE_FILE_MACHINE_I386, Bit16) // Machine
+	switch pe.cpu {
+		case MACHINE_X86:
+			pe.WriteStrict(pe_IMAGE_FILE_MACHINE_I386, Bit16) // Machine
+		case MACHINE_X64:
+			pe.WriteStrict(pe_IMAGE_FILE_MACHINE_AMD64, Bit16) // Machine
+	}
 	pe.WriteStrict(1, Bit16) // NumberOfSections
 	pe.WriteStrict(time.Now().Unix(), Bit32) // TimeDateStamp
 	pe.WriteStrict(0, Bit32) // PointerToSymbolTable
 	pe.WriteStrict(0, Bit32) // NumberOfSymbols
 	pe.WriteStrict(224, Bit16) // SizeOfOptionalHeader
-	pe.WriteStrict(pe_IMAGE_FILE_EXECUTABLE_IMAGE | pe_IMAGE_FILE_LINE_NUMS_STRIPPED | pe_IMAGE_FILE_LOCAL_SYMS_STRIPPED | pe_IMAGE_FILE_LARGE_ADDRESS_AWARE | pe_IMAGE_FILE_32BIT_MACHINE | pe_IMAGE_FILE_DEBUG_STRIPPED, Bit16) // Characteristics
+	pe.WriteStrict(pe_IMAGE_FILE_EXECUTABLE_IMAGE | pe_IMAGE_FILE_LINE_NUMS_STRIPPED | pe_IMAGE_FILE_LOCAL_SYMS_STRIPPED | pe_IMAGE_FILE_LARGE_ADDRESS_AWARE | pe_IMAGE_FILE_DEBUG_STRIPPED, Bit16) // Characteristics
 }
 
-func (pe *PE) writeOptionalHeader32() { // 224字节。Magic~标准域，ImageBase~NT附加域
-	pe.WriteStrict(267, Bit16) // Magic
+func (pe *PE) writeOptionalHeader() { // 224字节。Magic~标准域，ImageBase~NT附加域
+	switch pe.cpu {
+		case MACHINE_X86:
+			pe.WriteStrict(pe_IMAGE_NT_OPTIONAL_HDR32_MAGIC, Bit16) // Magic
+		case MACHINE_X64:
+			pe.WriteStrict(pe_IMAGE_NT_OPTIONAL_HDR64_MAGIC, Bit16) // Magic
+	}
 	pe.WriteStrict(1, Bit8) // MajorLinkerVersion
 	pe.WriteStrict(0, Bit8) // MinerLinkerVersion
 	pe.WriteDifference("SectionStart", "SectionEnd", 0, Bit32) // SizeOfCode
@@ -110,8 +120,10 @@ func (pe *PE) writeOptionalHeader32() { // 224字节。Magic~标准域，ImageBa
 	pe.WriteStrict(0, Bit32) // SizeOfUnInitializedData
 	pe.WriteStrict(pe_RVA_SECTION, Bit32) // AddressOfEntryPoint
 	pe.WriteStrict(pe_RVA_SECTION, Bit32) // BaseOfCode
-	pe.WriteStrict(pe_RVA_SECTION, Bit32) // BaseOfData
-	pe.WriteStrict(pe.imgBase, Bit32) // ImageBase
+	if pe.cpu == MACHINE_X86 {
+		pe.WriteStrict(pe_RVA_SECTION, Bit32) // BaseOfData
+	}
+	pe.WriteStrict(pe.imgBase, pe.cpu) // ImageBase
 	pe.WriteStrict(pe_ALIGNMENT_IMAGE, Bit32) // SectionAlignment
 	pe.WriteStrict(pe_ALIGNMENT_FILE, Bit32) // FileAlignment
 	pe.WriteStrict(5, Bit16) // MajorOperatingSystemVersion
@@ -130,17 +142,17 @@ func (pe *PE) writeOptionalHeader32() { // 224字节。Magic~标准域，ImageBa
 		pe.WriteStrict(pe_IMAGE_SUBSYSTEM_WINDOWS_GUI, Bit16) // Subsystem
 	}
 	pe.WriteStrict(0, Bit16) // DllCharacteristics
-	pe.WriteStrict(65536, Bit32) // SizeOfStackReserve
-	pe.WriteStrict(4096, Bit32) // SizeOfStackCommit
-	pe.WriteStrict(65536, Bit32) // SizeOfHeapReserve
-	pe.WriteStrict(4096, Bit32) // SizeOfHeapCommit
+	pe.WriteStrict(65536, pe.cpu) // SizeOfStackReserve
+	pe.WriteStrict(4096, pe.cpu) // SizeOfStackCommit
+	pe.WriteStrict(65536, pe.cpu) // SizeOfHeapReserve
+	pe.WriteStrict(4096, pe.cpu) // SizeOfHeapCommit
 	pe.WriteStrict(0, Bit32) // LoaderFlags
 	pe.WriteStrict(16, Bit32) // NumberOfRvaAndSizes
 
 	for i := 0; i < 16; i++ {
 		// IMAGE_DATA_DIRECTORY
 		if i == pe_IMAGE_DIRECTORY_ENTRY_IMPORT {
-			pe.WriteRVA("ImportDescriptors") // VirtualAddress
+			pe.WriteRVA("ImportDescriptors", Bit32) // VirtualAddress
 			pe.WriteStrict(40, Bit32) // Size
 		}else{
 			pe.WriteStrict(0, Bit32) // VirtualAddress
@@ -185,17 +197,17 @@ func (pe *PE) ImpBinLibFunc(dll string, function string) {
 }
 
 func (pe *PE) WriteBinlibFuncPtr(function string) {
-	pe.WriteVA("Imp.Func." + function)
+	pe.WriteVA("Imp.Func." + function, pe.cpu)
 }
 
 func (pe *PE) writeImportDescriptors() {
 	pe.Label("ImportDescriptors")
 	for dll, _ := range pe.imps { // 输出 IMAGE_IMPORT_DESCRIPTOR 数组
-		pe.WriteRVA("Imp.Lib." + dll + ".Thunk") // OriginalFirstThunk
+		pe.WriteRVA("Imp.Lib." + dll + ".Thunk", Bit32) // OriginalFirstThunk
 		pe.WriteStrict(0, Bit32) // TimeDateStamp
 		pe.WriteStrict(0, Bit32) // ForwarderChain
-		pe.WriteRVA("Imp.Lib." + dll + ".Name") // Name
-		pe.WriteRVA("Imp.Lib." + dll + ".Thunk") // FirstThunk
+		pe.WriteRVA("Imp.Lib." + dll + ".Name", Bit32) // Name
+		pe.WriteRVA("Imp.Lib." + dll + ".Thunk", Bit32) // FirstThunk
 	}
 	pe.WriteSpace(pe_IMPORT_DESCRIPTOR_SIZE) // 尾 IMAGE_IMPORT_DESCRIPTOR
 
@@ -207,7 +219,7 @@ func (pe *PE) writeImportDescriptors() {
 		pe.Label("Imp.Lib." + dll + ".Thunk")
 		for i := 0; i < len(funcs); i++ {
 			pe.Label("Imp.Func." + funcs[i])
-			pe.WriteRVA("Imp.Func." + funcs[i] + ".Name")
+			pe.WriteRVA("Imp.Func." + funcs[i] + ".Name", Bit32)
 		}
 		pe.WriteSpace(Bit32) // 结尾
 
@@ -227,10 +239,11 @@ const(
 	pe_ALIGNMENT_FILE = 0x00000200
 	pe_IMPORT_DESCRIPTOR_SIZE = 20
 
-	pe_IMAGE_NT_SIGNATURE = "PE"
-
 	pe_IMAGE_FILE_MACHINE_I386 = 0x014c // x86 CPU
-	pe_IMAGE_FILE_MACHINE_IA64 = 0x0200 // x64 CPU
+	pe_IMAGE_FILE_MACHINE_AMD64 = 0x8664 // x64 CPU
+
+	pe_IMAGE_NT_OPTIONAL_HDR32_MAGIC = 0x10b
+	pe_IMAGE_NT_OPTIONAL_HDR64_MAGIC = 0x20b
 
 	pe_IMAGE_FILE_RELOCS_STRIPPED = 0x0001 // 文件中不存在重定位信息
 	pe_IMAGE_FILE_EXECUTABLE_IMAGE = 0x0002 // 文件是可执行的

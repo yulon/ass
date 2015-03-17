@@ -1,3 +1,3 @@
 package ass
 
-const MACHINE_X86 = 32
+const MACHINE_X86 = 4
