@@ -2,8 +2,8 @@ package ass
 
 import (
 	"os"
-	"errors"
 	"bytes"
+	"errors"
 )
 
 type baseMaker struct{
@@ -18,7 +18,7 @@ type pit struct{
 	start string
 	end string
 	offset int64
-	bit uint8
+	bit int
 }
 
 func NewBaseMaker(path string) (*baseMaker, error) {
@@ -34,66 +34,59 @@ func NewBaseMaker(path string) (*baseMaker, error) {
 	}, err
 }
 
-var DataTypeError = errors.New("Data Type Error")
-
-func toBin(data interface{}) ([]byte, error) {
+func bin(data interface{}) []byte {
 	switch d := data.(type){
 		case []byte:
-			return d, nil
+			return d
 		case string:
-			return []byte(d), nil
+			return []byte(d)
+		case int:
+			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24), byte(d >> 32), byte(d >> 40), byte(d >> 48), byte(d >> 56)}
+		case uint:
+			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24), byte(d >> 32), byte(d >> 40), byte(d >> 48), byte(d >> 56)}
 		case int32:
-			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24)}, nil
+			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24)}
 		case uint32:
-			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24)}, nil
+			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24)}
 		case int16:
-			return []byte{byte(d), byte(d >> 8)}, nil
+			return []byte{byte(d), byte(d >> 8)}
 		case uint16:
-			return []byte{byte(d), byte(d >> 8)}, nil
+			return []byte{byte(d), byte(d >> 8)}
 		case int8:
-			return []byte{byte(d)}, nil
+			return []byte{byte(d)}
 		case uint8:
-			return []byte{d}, nil
+			return []byte{d}
 		case int64:
-			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24), byte(d >> 32), byte(d >> 40), byte(d >> 48), byte(d >> 56)}, nil
+			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24), byte(d >> 32), byte(d >> 40), byte(d >> 48), byte(d >> 56)}
 		case uint64:
-			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24), byte(d >> 32), byte(d >> 40), byte(d >> 48), byte(d >> 56)}, nil
+			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24), byte(d >> 32), byte(d >> 40), byte(d >> 48), byte(d >> 56)}
 		default:
-			return nil, DataTypeError
+			return nil
 	}
 }
 
-func (bm *baseMaker) Write(data interface{}) (int, error) {
-	b, e := toBin(data)
-	if e != nil {
-		return 0, e
-	}
-
-	l, e := bm.f.Write(b)
-	if e != nil {
-		return 0, e
-	}
-
+func (bm *baseMaker) Write(data interface{}) {
+	l, _ := bm.f.Write(bin(data))
 	bm.leng += int64(l)
-	return l, nil
 }
 
-func (bm *baseMaker) WriteSpace(count int) (int, error) {
-	return bm.Write(bytes.Repeat([]byte{0}, count))
+func (bm *baseMaker) WriteSolid(data interface{}, size int) {
+	b := bin(data)
+	l := len(b)
+	if l < size {
+		bm.Write(b)
+		bm.WriteSpace(size - l)
+	}else{
+		bm.Write(b[:size])
+	}
 }
 
-func (bm *baseMaker) writeAt(data interface{}, offset int64) error {
-	b, e := toBin(data)
-	if e != nil {
-		return e
-	}
+func (bm *baseMaker) WriteSpace(count int) {
+	bm.Write(bytes.Repeat([]byte{0}, count))
+}
 
-	_, e = bm.f.WriteAt(b, offset)
-	if e != nil {
-		return e
-	}
-
-	return nil
+func (bm *baseMaker) writeAt(data interface{}, offset int64) {
+	bm.f.WriteAt(bin(data), offset)
 }
 
 func (bm *baseMaker) Label(key string) {
@@ -105,13 +98,13 @@ func (bm *baseMaker) Len() int64 {
 }
 
 const(
-	BIT_8 = 1
-	BIT_16 = 2
-	BIT_32 = 4
-	BIT_64 = 8
+	Bit8 = 1
+	Bit16 = 2
+	Bit32 = 4
+	Bit64 = 8
 )
 
-func (bm *baseMaker) WriteRelative(startLabel string, endLabel string, offset int64, bit uint8) error {
+func (bm *baseMaker) WriteDifference(startLabel string, endLabel string, offset int64, bit int) {
 	bm.pits = append(bm.pits, pit{
 		addr: bm.leng,
 		start: startLabel,
@@ -119,12 +112,19 @@ func (bm *baseMaker) WriteRelative(startLabel string, endLabel string, offset in
 		offset: offset,
 		bit: bit,
 	})
-	_, err := bm.WriteSpace(int(bit))
-	return err
+	bm.WriteSpace(bit)
 }
 
-func (bm *baseMaker) WriteFilePointer(label string, bit uint8) error {
-	return bm.WriteRelative("", label, 0, bit)
+func (bm *baseMaker) WritePointer(label string, bit int) {
+	bm.WriteDifference("", label, 0, bit)
+}
+
+func (bm *baseMaker) WriteCurrent(bit int) {
+	bm.WriteDifference("", "", 0, bit)
+}
+
+func (bm *baseMaker) WriteRelative(label string, bit int) {
+	bm.WriteDifference(label, "", 0, bit)
 }
 
 func (bm *baseMaker) Close() error {
@@ -154,13 +154,13 @@ func (bm *baseMaker) Close() error {
 		n := end - start + bm.pits[i].offset
 		//println(bm.pits[i].start, bm.pits[i].end, bm.labels[bm.pits[i].start], bm.labels[bm.pits[i].end], start, end)
 		switch bm.pits[i].bit {
-			case BIT_8:
+			case Bit8:
 				bm.writeAt(int8(n), bm.pits[i].addr)
-			case BIT_16:
+			case Bit16:
 				bm.writeAt(int16(n), bm.pits[i].addr)
-			case BIT_32:
+			case Bit32:
 				bm.writeAt(int32(n), bm.pits[i].addr)
-			case BIT_64:
+			case Bit64:
 				bm.writeAt(n, bm.pits[i].addr)
 		}
 	}
