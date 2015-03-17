@@ -133,7 +133,7 @@ func (fwm *FileWriteManager) Fill() error {
 		var ok bool
 
 		if fwm.pits[i].start == "" {
-			start = 0
+			start = fwm.start
 		}else{
 			start, ok = fwm.labels[fwm.pits[i].start]
 			if !ok {
@@ -149,8 +149,8 @@ func (fwm *FileWriteManager) Fill() error {
 				return errors.New(fwm.pits[i].end + " is not found")
 			}
 		}
+		
 		n := end - start + fwm.pits[i].offset
-		//println(fwm.pits[i].start, fwm.pits[i].end, fwm.labels[fwm.pits[i].start], fwm.labels[fwm.pits[i].end], start, end)
 		switch fwm.pits[i].bit {
 			case Bit8:
 				fwm.writeAt(int8(n), fwm.pits[i].addr)
