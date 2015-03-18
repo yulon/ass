@@ -8,7 +8,7 @@ import (
 type PE struct{
 	file *os.File
 	*FileWriteManager
-	imps map[string][]string
+	imps map[string]map[string]bool
 	imgBase int64
 	cui bool
 	cpu int
@@ -22,7 +22,7 @@ func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, err
 	pe := &PE{
 		file: f,
 		FileWriteManager: NewFileWriteManager(f),
-		imps: map[string][]string{},
+		imps: map[string]map[string]bool{},
 		imgBase: imageBase,
 		cui: console,
 		cpu: machine,
@@ -170,42 +170,45 @@ func (pe *PE) sectionEnd() {
 	pe.Label("SectionAlignEnd")
 }
 
-func (pe *PE) ImpBinLibFunc(dll string, function string) {
-	pe.imps[dll] = append(pe.imps[dll], function)
-}
-
-func (pe *PE) WriteBinlibFuncPtr(function string) {
-	pe.WriteVA("Imp.Func." + function, Bit32)
+func (pe *PE) WriteDLLFuncPtr(dll string, function string) {
+	_, ok := pe.imps[dll]
+	if !ok {
+		pe.imps[dll] = map[string]bool{}
+		pe.imps[dll][function] = true
+	}
+	pe.WriteVA("DLLFunc."+ dll + "." + function + ".Ptr", Bit32)
 }
 
 func (pe *PE) writeImportDescriptors() {
 	pe.Label("ImportDescriptors")
 	for dll, _ := range pe.imps { // 输出 IMAGE_IMPORT_DESCRIPTOR 数组
-		pe.WriteRVA("Imp.Lib." + dll + ".Thunk", Bit32) // OriginalFirstThunk
+		pe.WriteRVA("DLL." + dll + ".Thunk", Bit32) // OriginalFirstThunk
 		pe.WriteStrict(0, Bit32) // TimeDateStamp
 		pe.WriteStrict(0, Bit32) // ForwarderChain
-		pe.WriteRVA("Imp.Lib." + dll + ".Name", Bit32) // Name
-		pe.WriteRVA("Imp.Lib." + dll + ".Thunk", Bit32) // FirstThunk
+		pe.WriteRVA("DLL." + dll + ".Name", Bit32) // Name
+		pe.WriteRVA("DLL." + dll + ".Thunk", Bit32) // FirstThunk
 	}
 	pe.WriteSpace(pe_IMPORT_DESCRIPTOR_SIZE) // 尾 IMAGE_IMPORT_DESCRIPTOR
 
 	for dll, funcs := range pe.imps {
-		pe.Label("Imp.Lib." + dll + ".Name")
+		pe.Label("DLL." + dll + ".Name")
 		pe.Write(dll)
 		pe.Write(byte(0))
 
-		pe.Label("Imp.Lib." + dll + ".Thunk")
-		for i := 0; i < len(funcs); i++ {
-			pe.Label("Imp.Func." + funcs[i])
-			pe.WriteRVA("Imp.Func." + funcs[i] + ".Name", pe.cpu)
+		pe.Label("DLL." + dll + ".Thunk")
+		for function, _ := range funcs {
+			pe.Label("DLLFunc."+ dll +"." + function + ".Ptr")
+			pe.WriteRVA("DLLFunc."+ dll +"." + function + ".Name", pe.cpu)
 		}
 		pe.WriteSpace(pe.cpu) // 结尾
 
-		for i := 0; i < len(funcs); i++ {
-			pe.Label("Imp.Func." + funcs[i] + ".Name")
+		i := 0
+		for function, _ := range funcs {
+			pe.Label("DLLFunc."+ dll +"." + function + ".Name")
 			pe.WriteStrict(i, Bit16)
-			pe.Write(funcs[i])
+			pe.Write(function)
 			pe.Write(byte(0))
+			i++
 		}
 	}
 }
