@@ -8,6 +8,7 @@ import (
 type PE struct{
 	file *os.File
 	*FileWriteManager
+	IS
 	imps map[string]map[string]bool
 	imgBase int64
 	cui bool
@@ -26,6 +27,12 @@ func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, err
 		imgBase: imageBase,
 		cui: console,
 		cpu: machine,
+	}
+	switch pe.cpu {
+		case MACHINE_X86:
+			pe.IS = &X86{
+				w: f,
+			}
 	}
 	pe.writeDOSHeader()
 	pe.writeNTHeader()

@@ -8,14 +8,19 @@ import (
 func Test_PE32(t *testing.T) {
 	exe, _ := CreatePE("test32.exe", MACHINE_X86, PE_IMAGEBASE_GENERAL, true)
 
-	exe.Write([]byte{104}) // push _
+	exe.Reg()
 	exe.WriteVA("hw", Bit32)
+	exe.SetParam()
 
-	exe.Write([]byte{255, 21}) // call [_]
+	exe.Reg()
 	exe.WriteDLLFuncPtr("msvcrt.dll", "printf")
+	exe.Adsing()
+	exe.Call()
 
-	exe.Write([]byte{255, 21}) // call [_]
+	exe.Reg()
 	exe.WriteDLLFuncPtr("kernel32.dll", "ExitProcess")
+	exe.Adsing()
+	exe.Call()
 
 	exe.Label("hw")
 	exe.Write("Hello, World!\r\n")
