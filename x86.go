@@ -25,9 +25,3 @@ func (x86 *X86) SetParam() {
 func (x86 *X86) Call() {
 	x86.w.Write([]byte{255,208})
 }
-
-/*
-func (x86 *X86) CallPtr() {
-	x86.w.Write([]byte{255,16})
-}
-*/
