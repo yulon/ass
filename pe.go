@@ -30,7 +30,7 @@ func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, err
 	}
 	switch pe.cpu {
 		case MACHINE_X86:
-			pe.IS = &X86{
+			pe.IS = &x86{
 				w: f,
 			}
 	}
