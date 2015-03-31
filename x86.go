@@ -15,7 +15,7 @@ func (x86 *X86) Reg() {
 }
 
 func (x86 *X86) Adsing() {
-	x86.w.Write([]byte{139,0})
+	x86.w.Write([]byte{139, 0})
 }
 
 func (x86 *X86) SetParam() {
@@ -23,5 +23,5 @@ func (x86 *X86) SetParam() {
 }
 
 func (x86 *X86) Call() {
-	x86.w.Write([]byte{255,208})
+	x86.w.Write([]byte{255, 208})
 }
