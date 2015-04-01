@@ -8,7 +8,7 @@ import (
 type PE struct{
 	file *os.File
 	*FileWriteManager
-	is map[string][]byte
+	IS
 	imps map[string]map[string]bool
 	imgBase int64
 	cui bool
@@ -30,17 +30,15 @@ func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, err
 	}
 	switch pe.cpu {
 		case MACHINE_X86:
-			pe.is = x86
+			pe.IS = &x86{
+				w: f,
+			}
 	}
 	pe.writeDOSHeader()
 	pe.writeNTHeader()
 	pe.writeSectionHeader()
 	pe.sectionStart()
 	return pe, nil
-}
-
-func (pe *PE) WriteCode(code string) {
-	pe.Write(pe.is[code])
 }
 
 func (pe *PE) Close() error {
