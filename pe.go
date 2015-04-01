@@ -33,6 +33,10 @@ func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, err
 			pe.IS = &x86{
 				w: f,
 			}
+		case MACHINE_X64:
+			pe.IS = &x64{
+				w: f,
+			}
 	}
 	pe.writeDOSHeader()
 	pe.writeNTHeader()
@@ -57,8 +61,8 @@ func (pe *PE) WriteRVA(mark string, bit int) {
 	pe.WriteDifference("SectionStart", mark, pe_RVA_SECTION, bit)
 }
 
-func (pe *PE) WriteVA(mark string, bit int) {
-	pe.WriteDifference("SectionStart", mark, pe.imgBase + pe_RVA_SECTION, bit)
+func (pe *PE) WriteVA(mark string) {
+	pe.WriteDifference("SectionStart", mark, pe.imgBase + pe_RVA_SECTION, pe.cpu)
 }
 
 func (pe *PE) writeDOSHeader() { // 64字节
@@ -183,7 +187,7 @@ func (pe *PE) WriteDLLFuncPtr(dll string, function string) {
 		pe.imps[dll] = map[string]bool{}
 		pe.imps[dll][function] = true
 	}
-	pe.WriteVA("DLLFunc."+ dll + "." + function + ".Ptr", Bit32)
+	pe.WriteVA("DLLFunc."+ dll + "." + function + ".Ptr")
 }
 
 func (pe *PE) writeImportDescriptors() {
