@@ -10,17 +10,17 @@ func Test_PE32(t *testing.T) {
 
 	exe.Reg()
 	exe.WriteVA("hw", Bit32)
-	exe.SetParam()
+	exe.Sep()
 
 	exe.Reg()
 	exe.WriteDLLFuncPtr("msvcrt.dll", "printf")
-	exe.Adsing()
-	exe.Call()
+	exe.Adi()
+	exe.Cal()
 
 	exe.Reg()
 	exe.WriteDLLFuncPtr("kernel32.dll", "ExitProcess")
-	exe.Adsing()
-	exe.Call()
+	exe.Adi()
+	exe.Cal()
 
 	exe.Label("hw")
 	exe.Write("Hello, World!\r\n")

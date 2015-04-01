@@ -14,14 +14,14 @@ func (x86 *x86) Reg() {
 	x86.w.Write([]byte{184})
 }
 
-func (x86 *x86) Adsing() {
+func (x86 *x86) Adi() {
 	x86.w.Write([]byte{139, 0})
 }
 
-func (x86 *x86) SetParam() {
+func (x86 *x86) Sep() {
 	x86.w.Write([]byte{80})
 }
 
-func (x86 *x86) Call() {
+func (x86 *x86) Cal() {
 	x86.w.Write([]byte{255, 208})
 }
