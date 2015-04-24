@@ -17,7 +17,7 @@ type pit struct{
 	addr int64
 	start string
 	end string
-	offset int64
+	added int64
 	bit int
 }
 
@@ -81,12 +81,12 @@ func (fwm *FileWriteManager) WriteSpace(count int) {
 	fwm.Write(bytes.Repeat([]byte{0}, count))
 }
 
-func (fwm *FileWriteManager) writeAt(data interface{}, offset int64) {
-	fwm.f.WriteAt(bin(data), offset)
+func (fwm *FileWriteManager) writeAt(data interface{}, added int64) {
+	fwm.f.WriteAt(bin(data), added)
 }
 
-func (fwm *FileWriteManager) Label(key string) {
-	fwm.labels[key] = fwm.Len()
+func (fwm *FileWriteManager) Label(l string) {
+	fwm.labels[l] = fwm.Len()
 }
 
 func (fwm *FileWriteManager) Len() int64 {
@@ -104,27 +104,23 @@ const(
 	Bit64 = 8
 )
 
-func (fwm *FileWriteManager) WriteDifference(startLabel string, endLabel string, offset int64, bit int) {
+func (fwm *FileWriteManager) WrlabOffset(startLabel string, endLabel string, added int64, bit int) {
 	fwm.pits = append(fwm.pits, pit{
 		addr: fwm.Len(),
 		start: startLabel,
 		end: endLabel,
-		offset: offset,
+		added: added,
 		bit: bit,
 	})
 	fwm.WriteSpace(bit)
 }
 
-func (fwm *FileWriteManager) WritePointer(label string, bit int) {
-	fwm.WriteDifference("", label, 0, bit)
+func (fwm *FileWriteManager) WrlabPointer(label string, bit int) {
+	fwm.WrlabOffset("", label, 0, bit)
 }
 
-func (fwm *FileWriteManager) WriteCurrent(bit int) {
-	fwm.WriteDifference("", "", 0, bit)
-}
-
-func (fwm *FileWriteManager) WriteRelative(label string, bit int) {
-	fwm.WriteDifference(label, "", 0, bit)
+func (fwm *FileWriteManager) WrlabRelative(label string, bit int) {
+	fwm.WrlabOffset(label, "", 0, bit)
 }
 
 func (fwm *FileWriteManager) Fill() error {
@@ -150,7 +146,7 @@ func (fwm *FileWriteManager) Fill() error {
 			}
 		}
 		
-		n := end - start + fwm.pits[i].offset
+		n := end - start + fwm.pits[i].added
 		switch fwm.pits[i].bit {
 			case Bit8:
 				fwm.writeAt(int8(n), fwm.pits[i].addr)
