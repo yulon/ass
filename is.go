@@ -1,8 +1,9 @@
 package ass
 
 type IS interface{
-	Reg()
-	Adi()
-	Sep()
-	Cal()
+	ValToReg(interface{}, string)
+	PtrToReg(interface{}, string)
+	Push(string)
+	Pop(string)
+	CallReg(string)
 }
