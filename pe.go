@@ -182,7 +182,7 @@ func (pe *PE) sectionEnd() {
 	pe.Label("SectionAlignEnd")
 }
 
-func (pe *PE) ImpDLLFnPtr(dll string, function string) string {
+func (pe *PE) DLLFnPtr(dll string, function string) string {
 	_, ok := pe.imps[dll]
 	if !ok {
 		pe.imps[dll] = map[string]bool{}
