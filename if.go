@@ -7,8 +7,8 @@ type ExecutableFileMaker interface{
 
 type MachineCodeWriter interface{
 	MovRegNum(string, interface{})
-	MovRegPtr(string, interface{})
-	Push(string)
+	MovRegPtr(string, interface{}, uint8)
+	PushReg(string)
 	Pop(string)
 	CallReg(string)
 }

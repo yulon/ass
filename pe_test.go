@@ -14,10 +14,14 @@ func Test_PE(t *testing.T) {
 func hw_exe(machine int) {
 	exe, _ := CreatePE("test" + strconv.Itoa(machine * 8) + ".exe", machine, PE_IMAGEBASE_GENERAL, true)
 
-	exe.Ins("push", "dword", "hw_string")
-	exe.Ins("call", "ptr", exe.ImpDLLFnPtr("msvcrt.dll", "printf"))
+	exe.MovRegNum("eax", "hw_string")
+	exe.PushReg("eax")
 
-	exe.Ins("call", "ptr", exe.ImpDLLFnPtr("kernel32.dll", "ExitProcess"))
+	exe.MovRegPtr("eax", exe.ImpDLLFnPtr("msvcrt.dll", "printf"), Bit32)
+	exe.CallReg("eax")
+
+	exe.MovRegPtr("eax", exe.ImpDLLFnPtr("kernel32.dll", "ExitProcess"), Bit32)
+	exe.CallReg("eax")
 
 
 	exe.Label("hw_string")
