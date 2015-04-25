@@ -7,20 +7,24 @@ import (
 )
 
 func Test_PE(t *testing.T) {
-	hw_exe(MACHINE_X86)
-	//hw_exe(MACHINE_X64)
+	hw_exe(X86)
+	//hw_exe(X64)
 }
 
 func hw_exe(machine int) {
 	exe, _ := CreatePE("test" + strconv.Itoa(machine * 8) + ".exe", machine, PE_IMAGEBASE_GENERAL, true)
 
-	exe.ValToReg("hw_string", "eax")
-	exe.Push("eax")
-	exe.PtrToReg(exe.ImpDLLFunc("msvcrt.dll", "printf"), "eax")
-	exe.CallReg("eax")
+	exe.Ins.MovRegNum("eax", nil)
+	exe.WrlabVA("hw_string")
+	exe.Ins.Push("eax")
 
-	exe.PtrToReg(exe.ImpDLLFunc("kernel32.dll", "ExitProcess"), "eax")
-	exe.CallReg("eax")
+	exe.Ins.MovRegPtr("eax", nil)
+	exe.WriteDLLFnPtr("msvcrt.dll", "printf")
+	exe.Ins.CallReg("eax")
+
+	exe.Ins.MovRegPtr("eax", nil)
+	exe.WriteDLLFnPtr("kernel32.dll", "ExitProcess")
+	exe.Ins.CallReg("eax")
 
 	exe.Label("hw_string")
 	exe.Write("Hello, World!\r\n")

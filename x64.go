@@ -1,10 +1,10 @@
 package ass
 
 import (
-	"io"
+	//"io"
 )
 
-const MACHINE_X64 = 8
+const X64 = 8
 
 type x64 struct{
 
