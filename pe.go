@@ -8,7 +8,7 @@ import (
 type PE struct{
 	file *os.File
 	*FileWriteManager
-	IS
+	MachineCodeWriter
 	imps map[string]map[string]bool
 	imgBase int64
 	cui bool
@@ -30,12 +30,12 @@ func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, err
 	}
 	switch pe.cpu {
 		case MACHINE_X86:
-			pe.IS = &x86{
+			pe.MachineCodeWriter = &x86mcw{
 				m: pe,
 			}
 		case MACHINE_X64:
 			/*
-			pe.IS = &x64{
+			pe.MachineCodeWriter = &x64{
 				m: pe,
 			}*/
 	}
@@ -182,7 +182,7 @@ func (pe *PE) sectionEnd() {
 	pe.Label("SectionAlignEnd")
 }
 
-func (pe *PE) ImpDLLFunc(dll string, function string) string {
+func (pe *PE) ImpDLLFnPtr(dll string, function string) string {
 	_, ok := pe.imps[dll]
 	if !ok {
 		pe.imps[dll] = map[string]bool{}

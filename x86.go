@@ -7,11 +7,11 @@ import (
 
 const MACHINE_X86 = 4
 
-type x86 struct{
+type x86mcw struct{
 	m ExecutableFileMaker
 }
 
-var x86SufRegDif = map[string]byte{
+var x86Regs = map[string]byte{
 	"eax": 0,
 	"ebx": 3,
 	"ecx": 1,
@@ -22,54 +22,68 @@ var x86SufRegDif = map[string]byte{
 	"esp": 4,
 }
 
-func (x86 *x86) swiol(iol interface{}) {
+func (w *x86mcw) swiol(iol interface{}) {
 	switch v := iol.(type){
 		case int:
-			x86.m.Write(int32(v))
+			w.m.Write(int32(v))
 		case string:
-			x86.m.WrlabVA(v)
+			w.m.WrlabVA(v)
 		default:
 			fmt.Println("Error: ", iol)
-			x86.m.Close()
 			os.Exit(1)
 	}
 }
 
-func (x86 *x86) ValToReg(v interface{}, r string) { // mov reg, val
-	x86.m.Write([]byte{184 + x86SufRegDif[r]})
-	x86.swiol(v)
+func (w *x86mcw) MovRegNum(dest string, src interface{}) {
+	w.m.Write([]byte{184 | x86Regs[dest]})
+	w.swiol(src)
 }
 
-func (x86 *x86) PtrToReg(p interface{}, r string) { // mov reg, [ptr]
-	switch r {
-		case "eax":
-			x86.m.Write([]byte{161})
-		case "ebx":
-			x86.m.Write([]byte{139, 29})
-		case "ecx":
-			x86.m.Write([]byte{139, 13})
-		case "edx":
-			x86.m.Write([]byte{139, 21})
-		case "esi":
-			x86.m.Write([]byte{139, 53})
-		case "edi":
-			x86.m.Write([]byte{139, 61})
-		case "ebp":
-			x86.m.Write([]byte{139, 45})
-		case "esp":
-			x86.m.Write([]byte{139, 37})
+func (w *x86mcw) MovRegPtr(dest string, src interface{}, bitSrc uint8) {
+	if dest == "eax" {
+		w.m.Write([]byte{161})
+	}else{
+		w.m.Write(uint16(1419 | x86Regs[dest] << 11)) // de10110001011
 	}
-	x86.swiol(p)
+	w.swiol(src)
 }
 
-func (x86 *x86) Push(r string) {
-	x86.m.Write([]byte{80 + x86SufRegDif[r]})
+func (w *x86mcw) MovRegReg(dest string, src string) {
+	w.m.Write(uint16(49289 | x86Regs[src] << 11 | x86Regs[dest] << 8)) // 110sr0de10001001
 }
 
-func (x86 *x86) Pop(r string) {
-	x86.m.Write([]byte{88 + x86SufRegDif[r]})
+func (w *x86mcw) PushReg(src string) {
+	w.m.Write([]byte{80 | x86Regs[src]})
 }
 
-func (x86 *x86) CallReg(r string) {
-	x86.m.Write([]byte{255, 208 + x86SufRegDif[r]})
+func (w *x86mcw) Pop(dest string) {
+	w.m.Write([]byte{88 | x86Regs[dest]})
+}
+
+func (w *x86mcw) CallReg(dest string) {
+	w.m.Write([]byte{53503 | x86Regs[dest] << 8}) // 110100RG11111111
+}
+
+var x86 = map[string]func([]interface{}) {
+	"mov": func(p []interface{}){
+		switch p[0] {
+			
+		}
+	},
+}
+
+func ifToString(i interface{}) string {
+	switch v := i.(type){
+		case string:
+			return v
+	}
+	return ""
+}
+
+func ifToInt(i interface{}) int {
+	switch v := i.(type){
+		case int:
+			return v
+	}
+	return 0
 }
