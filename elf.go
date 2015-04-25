@@ -22,7 +22,7 @@ const (
 
 type ELF struct{
 	file *os.File
-	*OutputManager
+	*FileWriteManager
 	imps map[string]map[string]bool
 }
 
@@ -33,7 +33,7 @@ func CreateELF(path string) (*ELF, error) {
 	}
 	elf := &ELF{
 		file: f,
-		OutputManager: NewOutputManager(f, 0),
+		FileWriteManager: NewFileWriteManager(f),
 		imps: map[string]map[string]bool{},
 	}
 	return elf, nil
@@ -47,17 +47,17 @@ func (elf *ELF) writeELFHeader() {
 	elf.WriteStrict(elfDATA2LSB, Bit8) // EI_DATA
 	elf.WriteStrict(ev_CURRENT, Bit8) // EI_VERSION
 	elf.WriteSpace(8) // EI_PAD
-	elf.WrlabPointer("IdentEnd", Bit8) // EI_NIDENT
+	elf.WritePointer("IdentEnd", Bit8) // EI_NIDENT
 	elf.Label("IdentEnd")
 
 	elf.WriteStrict(et_EXEC, Bit16) // e_type
 	elf.WriteStrict(em_386, Bit16) // e_machine
 	elf.WriteStrict(0, Bit32) // e_version
 	elf.WriteStrict(0, Bit32) // e_entry
-	elf.WrlabPointer("ProgramHeaderTable", Bit32) // e_phoff
-	elf.WrlabPointer("SectionHeaderTable", Bit32) // e_shoff
+	elf.WritePointer("ProgramHeaderTable", Bit32) // e_phoff
+	elf.WritePointer("SectionHeaderTable", Bit32) // e_shoff
 	elf.WriteStrict(0, Bit32) // e_flags
-	elf.WrlabPointer("ELFHeaderEnd", Bit16) // e_ehsize
+	elf.WritePointer("ELFHeaderEnd", Bit16) // e_ehsize
 	elf.WriteStrict(512, Bit16) // e_phentsize
 	elf.WriteStrict(1, Bit16) // e_phnum
 	elf.WriteStrict(512, Bit16) // e_shentsize
@@ -65,11 +65,4 @@ func (elf *ELF) writeELFHeader() {
 	elf.WriteStrict(shn_UNDEF, Bit16) // e_shstrndx
 	elf.Label("ELFHeaderEnd")
 }
-/*
-func (elf *ELF) writeProgramHeaderTable() {
-	elf.Label("ProgramHeaderTable")
-}
 
-func (elf *ELF) writeSectionHeaderTable() {
-	elf.Label("SectionHeaderTable")
-}*/

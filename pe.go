@@ -7,8 +7,8 @@ import (
 
 type PE struct{
 	file *os.File
-	*OutputManager
-	Ins InstructionSet
+	*FileWriteManager
+	IS
 	imps map[string]map[string]bool
 	imgBase int64
 	cui bool
@@ -22,49 +22,40 @@ func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, err
 	}
 	pe := &PE{
 		file: f,
-		OutputManager: NewOutputManager(f, 0),
+		FileWriteManager: NewFileWriteManager(f),
 		imps: map[string]map[string]bool{},
 		imgBase: imageBase,
 		cui: console,
 		cpu: machine,
 	}
-	pe.writeDOSHeader()
-	pe.writeNTHeader()
-	pe.writeSectionHeader()
-	pe.sectionStart()
-
 	switch pe.cpu {
-		case X86:
-			pe.Ins = &x86{
-				om: NewOutputManager(f, pe.Size()),
+		case MACHINE_X86:
+			pe.IS = &x86{
+				m: pe,
 			}
-		case X64:
+		case MACHINE_X64:
 			/*
 			pe.IS = &x64{
 				m: pe,
 			}*/
 	}
+	pe.writeDOSHeader()
+	pe.writeNTHeader()
+	pe.writeSectionHeader()
+	pe.sectionStart()
 	return pe, nil
 }
 
-func (pe *PE) Size() int64 {
-	fi, err := pe.file.Stat()
-	if err != nil {
-		return 0
-	}
-	return fi.Size()
-}
-
-func (pe *PE) Close() (err error) {
-	defer pe.file.Close()
-	//err = pe.Ins.Close()
-	if err != nil {
-		return
-	}
+func (pe *PE) Close() error {
 	pe.writeImportDescriptors()
 	pe.sectionEnd()
-	err = pe.OutputManager.Fill()
-	return
+	err := pe.FileWriteManager.Fill()
+	if err != nil {
+		pe.file.Close()
+		return err
+	}else{
+		return pe.file.Close()
+	}
 }
 
 func (pe *PE) WrlabRVA(mark string, bit int) {
@@ -90,9 +81,9 @@ func (pe *PE) writeNTHeader() { // 248字节
 
 func (pe *PE) writeFileHeader() { // 20字节
 	switch pe.cpu {
-		case X86:
+		case MACHINE_X86:
 			pe.WriteStrict(pe_IMAGE_FILE_MACHINE_I386, Bit16) // Machine
-		case X64:
+		case MACHINE_X64:
 			pe.WriteStrict(pe_IMAGE_FILE_MACHINE_AMD64, Bit16) // Machine
 	}
 	pe.WriteStrict(1, Bit16) // NumberOfSections
@@ -106,9 +97,9 @@ func (pe *PE) writeFileHeader() { // 20字节
 func (pe *PE) writeOptionalHeader() {
 	pe.Label("OptionalHeaderStart")
 	switch pe.cpu {
-		case X86:
+		case MACHINE_X86:
 			pe.WriteStrict(pe_IMAGE_NT_OPTIONAL_HDR32_MAGIC, Bit16) // Magic
-		case X64:
+		case MACHINE_X64:
 			pe.WriteStrict(pe_IMAGE_NT_OPTIONAL_HDR64_MAGIC, Bit16) // Magic
 	}
 	pe.WriteStrict(1, Bit8) // MajorLinkerVersion
@@ -118,7 +109,7 @@ func (pe *PE) writeOptionalHeader() {
 	pe.WriteStrict(0, Bit32) // SizeOfUnInitializedData
 	pe.WriteStrict(pe_RVA_SECTION, Bit32) // AddressOfEntryPoint
 	pe.WriteStrict(pe_RVA_SECTION, Bit32) // BaseOfCode
-	if pe.cpu == X86 {
+	if pe.cpu == MACHINE_X86 {
 		pe.WriteStrict(pe_RVA_SECTION, Bit32) // BaseOfData
 	}
 	pe.WriteStrict(pe.imgBase, pe.cpu) // ImageBase
@@ -175,7 +166,7 @@ func (pe *PE) writeSectionHeader() error {
 }
 
 func (pe *PE) sectionStart() {
-	m := pe.Size() % pe_ALIGNMENT_FILE
+	m := pe.Len() % pe_ALIGNMENT_FILE
 	if m > 0 {
 		pe.WriteSpace(int(pe_ALIGNMENT_FILE - m))
 	}
@@ -184,20 +175,20 @@ func (pe *PE) sectionStart() {
 
 func (pe *PE) sectionEnd() {
 	pe.Label("SectionEnd")
-	m := pe.Size() % pe_ALIGNMENT_FILE
+	m := pe.Len() % pe_ALIGNMENT_FILE
 	if m > 0 {
 		pe.WriteSpace(int(pe_ALIGNMENT_FILE - m))
 	}
 	pe.Label("SectionAlignEnd")
 }
 
-func (pe *PE) WriteDLLFnPtr(dll string, function string) {
+func (pe *PE) ImpDLLFunc(dll string, function string) string {
 	_, ok := pe.imps[dll]
 	if !ok {
 		pe.imps[dll] = map[string]bool{}
 		pe.imps[dll][function] = true
 	}
-	pe.WrlabVA("DLLFunc."+ dll + "." + function + ".Ptr")
+	return "DLLFunc."+ dll + "." + function + ".Ptr"
 }
 
 func (pe *PE) writeImportDescriptors() {
