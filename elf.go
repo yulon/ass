@@ -47,17 +47,17 @@ func (elf *ELF) writeELFHeader() {
 	elf.WriteStrict(elfDATA2LSB, Bit8) // EI_DATA
 	elf.WriteStrict(ev_CURRENT, Bit8) // EI_VERSION
 	elf.WriteSpace(8) // EI_PAD
-	elf.WritePointer("IdentEnd", Bit8) // EI_NIDENT
+	elf.WrlabPointer("IdentEnd", Bit8) // EI_NIDENT
 	elf.Label("IdentEnd")
 
 	elf.WriteStrict(et_EXEC, Bit16) // e_type
 	elf.WriteStrict(em_386, Bit16) // e_machine
 	elf.WriteStrict(0, Bit32) // e_version
 	elf.WriteStrict(0, Bit32) // e_entry
-	elf.WritePointer("ProgramHeaderTable", Bit32) // e_phoff
-	elf.WritePointer("SectionHeaderTable", Bit32) // e_shoff
+	elf.WrlabPointer("ProgramHeaderTable", Bit32) // e_phoff
+	elf.WrlabPointer("SectionHeaderTable", Bit32) // e_shoff
 	elf.WriteStrict(0, Bit32) // e_flags
-	elf.WritePointer("ELFHeaderEnd", Bit16) // e_ehsize
+	elf.WrlabPointer("ELFHeaderEnd", Bit16) // e_ehsize
 	elf.WriteStrict(512, Bit16) // e_phentsize
 	elf.WriteStrict(1, Bit16) // e_phnum
 	elf.WriteStrict(512, Bit16) // e_shentsize
@@ -66,3 +66,11 @@ func (elf *ELF) writeELFHeader() {
 	elf.Label("ELFHeaderEnd")
 }
 
+/*
+func (elf *ELF) writeProgramHeaderTable() {
+	elf.Label("ProgramHeaderTable")
+}
+
+func (elf *ELF) writeSectionHeaderTable() {
+	elf.Label("SectionHeaderTable")
+}*/
