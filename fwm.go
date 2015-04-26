@@ -4,10 +4,11 @@ import (
 	"os"
 	"bytes"
 	"errors"
+	"fmt"
 )
 
 type FileWriteManager struct{
-	f *os.File
+	*os.File
 	labels map[string]int64
 	pits []pit
 	start int64
@@ -18,12 +19,12 @@ type pit struct{
 	start string
 	end string
 	added int64
-	bit int
+	i2bf func(IntX)[]byte
 }
 
 func NewFileWriteManager(f *os.File) *FileWriteManager {
 	fwm := &FileWriteManager{
-		f: f,
+		File: f,
 		labels: map[string]int64{},
 		pits: []pit{},
 	}
@@ -31,58 +32,8 @@ func NewFileWriteManager(f *os.File) *FileWriteManager {
 	return fwm
 }
 
-func bin(data interface{}) []byte {
-	switch d := data.(type){
-		case []byte:
-			return d
-		case string:
-			return []byte(d)
-		case int:
-			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24), byte(d >> 32), byte(d >> 40), byte(d >> 48), byte(d >> 56)}
-		case uint:
-			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24), byte(d >> 32), byte(d >> 40), byte(d >> 48), byte(d >> 56)}
-		case int32:
-			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24)}
-		case uint32:
-			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24)}
-		case int16:
-			return []byte{byte(d), byte(d >> 8)}
-		case uint16:
-			return []byte{byte(d), byte(d >> 8)}
-		case int8:
-			return []byte{byte(d)}
-		case uint8:
-			return []byte{d}
-		case int64:
-			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24), byte(d >> 32), byte(d >> 40), byte(d >> 48), byte(d >> 56)}
-		case uint64:
-			return []byte{byte(d), byte(d >> 8), byte(d >> 16), byte(d >> 24), byte(d >> 32), byte(d >> 40), byte(d >> 48), byte(d >> 56)}
-		default:
-			return nil
-	}
-}
-
-func (fwm *FileWriteManager) Write(data interface{}) {
-	fwm.f.Write(bin(data))
-}
-
-func (fwm *FileWriteManager) WriteStrict(data interface{}, size int) {
-	b := bin(data)
-	l := len(b)
-	if l < size {
-		fwm.Write(b)
-		fwm.WriteSpace(size - l)
-	}else{
-		fwm.Write(b[:size])
-	}
-}
-
 func (fwm *FileWriteManager) WriteSpace(count int) {
 	fwm.Write(bytes.Repeat([]byte{0}, count))
-}
-
-func (fwm *FileWriteManager) writeAt(data interface{}, added int64) {
-	fwm.f.WriteAt(bin(data), added)
 }
 
 func (fwm *FileWriteManager) Label(l string) {
@@ -90,37 +41,45 @@ func (fwm *FileWriteManager) Label(l string) {
 }
 
 func (fwm *FileWriteManager) Len() int64 {
-	fi, err := fwm.f.Stat()
+	fi, err := fwm.Stat()
 	if err != nil {
 		return 0
 	}
-	return fi.Size()
+	return int64(fi.Size())
 }
 
-const(
-	Bit8 = 1
-	Bit16 = 2
-	Bit32 = 4
-	Bit64 = 8
-)
-
-func (fwm *FileWriteManager) WrlabOffset(startLabel string, endLabel string, added int64, bit int) {
+func (fwm *FileWriteManager) WrlabOffset(startLabel string, endLabel string, added int64, i2bf func(IntX)[]byte) {
 	fwm.pits = append(fwm.pits, pit{
 		addr: fwm.Len(),
 		start: startLabel,
 		end: endLabel,
 		added: added,
-		bit: bit,
+		i2bf: i2bf,
 	})
-	fwm.WriteSpace(bit)
+	switch fmt.Sprint(i2bf) {
+		case fmt.Sprint(Bin8):
+			fwm.WriteSpace(1)
+		case fmt.Sprint(Bin16L):
+			fwm.WriteSpace(2)
+		case fmt.Sprint(Bin32L):
+			fwm.WriteSpace(4)
+		case fmt.Sprint(Bin64L):
+			fwm.WriteSpace(8)
+		case fmt.Sprint(Bin16B):
+			fwm.WriteSpace(2)
+		case fmt.Sprint(Bin32B):
+			fwm.WriteSpace(4)
+		case fmt.Sprint(Bin64B):
+			fwm.WriteSpace(8)
+	}
 }
 
-func (fwm *FileWriteManager) WrlabPointer(label string, bit int) {
-	fwm.WrlabOffset("", label, 0, bit)
+func (fwm *FileWriteManager) WrlabPointer(label string, i2bf func(IntX)[]byte) {
+	fwm.WrlabOffset("", label, 0, i2bf)
 }
 
-func (fwm *FileWriteManager) WrlabRelative(label string, bit int) {
-	fwm.WrlabOffset(label, "", 0, bit)
+func (fwm *FileWriteManager) WrlabRelative(label string, i2bf func(IntX)[]byte) {
+	fwm.WrlabOffset(label, "", 0, i2bf)
 }
 
 func (fwm *FileWriteManager) Fill() error {
@@ -145,18 +104,9 @@ func (fwm *FileWriteManager) Fill() error {
 				return errors.New(fwm.pits[i].end + " is not found")
 			}
 		}
-		
+
 		n := end - start + fwm.pits[i].added
-		switch fwm.pits[i].bit {
-			case Bit8:
-				fwm.writeAt(int8(n), fwm.pits[i].addr)
-			case Bit16:
-				fwm.writeAt(int16(n), fwm.pits[i].addr)
-			case Bit32:
-				fwm.writeAt(int32(n), fwm.pits[i].addr)
-			case Bit64:
-				fwm.writeAt(n, fwm.pits[i].addr)
-		}
+		fwm.WriteAt(fwm.pits[i].i2bf(n), fwm.pits[i].addr)
 	}
 	return nil
 }

@@ -41,28 +41,28 @@ func CreateELF(path string) (*ELF, error) {
 
 func (elf *ELF) writeELFHeader() {
 	// e_ident
-	elf.WriteStrict(0x7f, Bit8) // ELFMAG0
-	elf.Write("ELF") // ELFMAG1~3
-	elf.WriteStrict(elfCLASS32, Bit8) // EI_CLASS
-	elf.WriteStrict(elfDATA2LSB, Bit8) // EI_DATA
-	elf.WriteStrict(ev_CURRENT, Bit8) // EI_VERSION
+	elf.Write(Bin8(0x7f)) // ELFMAG0
+	elf.Write([]byte("ELF")) // ELFMAG1~3
+	elf.Write(Bin8(elfCLASS32)) // EI_CLASS
+	elf.Write(Bin8(elfDATA2LSB)) // EI_DATA
+	elf.Write(Bin8(ev_CURRENT)) // EI_VERSION
 	elf.WriteSpace(8) // EI_PAD
-	elf.WrlabPointer("IdentEnd", Bit8) // EI_NIDENT
+	elf.WrlabPointer("IdentEnd", Bin8) // EI_NIDENT
 	elf.Label("IdentEnd")
 
-	elf.WriteStrict(et_EXEC, Bit16) // e_type
-	elf.WriteStrict(em_386, Bit16) // e_machine
-	elf.WriteStrict(0, Bit32) // e_version
-	elf.WriteStrict(0, Bit32) // e_entry
-	elf.WrlabPointer("ProgramHeaderTable", Bit32) // e_phoff
-	elf.WrlabPointer("SectionHeaderTable", Bit32) // e_shoff
-	elf.WriteStrict(0, Bit32) // e_flags
-	elf.WrlabPointer("ELFHeaderEnd", Bit16) // e_ehsize
-	elf.WriteStrict(512, Bit16) // e_phentsize
-	elf.WriteStrict(1, Bit16) // e_phnum
-	elf.WriteStrict(512, Bit16) // e_shentsize
-	elf.WriteStrict(1, Bit16) // e_shnum
-	elf.WriteStrict(shn_UNDEF, Bit16) // e_shstrndx
+	elf.Write(Bin16L(et_EXEC)) // e_type
+	elf.Write(Bin16L(em_386)) // e_machine
+	elf.Write(Bin32L(0)) // e_version
+	elf.Write(Bin32L(0)) // e_entry
+	elf.WrlabPointer("ProgramHeaderTable", Bin32L) // e_phoff
+	elf.WrlabPointer("SectionHeaderTable", Bin32L) // e_shoff
+	elf.Write(Bin32L(0)) // e_flags
+	elf.WrlabPointer("ELFHeaderEnd", Bin16L) // e_ehsize
+	elf.Write(Bin16L(512)) // e_phentsize
+	elf.Write(Bin16L(1)) // e_phnum
+	elf.Write(Bin16L(512)) // e_shentsize
+	elf.Write(Bin16L(1)) // e_shnum
+	elf.Write(Bin16L(shn_UNDEF)) // e_shstrndx
 	elf.Label("ELFHeaderEnd")
 }
 

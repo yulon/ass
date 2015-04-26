@@ -11,21 +11,21 @@ type x86mcw struct{
 	m ExecutableFileMaker
 }
 
-var x86Regs = map[string]uint16{
-	"eax": 0,
-	"ebx": 3,
-	"ecx": 1,
-	"edx": 2,
-	"esi": 6,
-	"edi": 7,
-	"ebp": 5,
-	"esp": 4,
-}
+const (
+	EAX = 0 //000
+	EBX = 3 //011
+	ECX = 1 //001
+	EDX = 2 //010
+	ESI = 6 //110
+	EDI = 7 //111
+	EBP = 5 //101
+	ESP = 4 //100
+)
 
 func (w *x86mcw) swiol(iol interface{}) {
 	switch v := iol.(type){
 		case int:
-			w.m.Write(int32(v))
+			w.m.Write(Bin32L(v))
 		case string:
 			w.m.WrlabVA(v)
 		default:
@@ -34,32 +34,32 @@ func (w *x86mcw) swiol(iol interface{}) {
 	}
 }
 
-func (w *x86mcw) MovRegNum(dest string, src interface{}) {
-	w.m.Write(byte(184 | x86Regs[dest]))
+func (w *x86mcw) MovRegNum(dst uint16, src interface{}) {
+	w.m.Write(Bin8(184 | dst))
 	w.swiol(src)
 }
 
-func (w *x86mcw) MovRegPtr(dest string, src interface{}, bitSrc uint8) {
-	if dest == "eax" {
-		w.m.Write(byte(161))
+func (w *x86mcw) MovRegPtr(dst uint16, src interface{}, byteSrc uint8) {
+	if dst == EAX {
+		w.m.Write(Bin8(161))
 	}else{
-		w.m.Write(uint16(1419 | x86Regs[dest] << 11)) // de10110001011
+		w.m.Write(Bin16L(1419 | dst << 11)) // de10110001011
 	}
 	w.swiol(src)
 }
 
-func (w *x86mcw) MovRegReg(dest string, src string) {
-	w.m.Write(uint16(49289 | x86Regs[src] << 11 | x86Regs[dest] << 8)) // 110sr0de10001001
+func (w *x86mcw) MovRegReg(dst uint16, src uint16) {
+	w.m.Write(Bin16L(49289 | src << 11 | dst << 8)) // 110sr0de10001001
 }
 
-func (w *x86mcw) PushReg(src string) {
-	w.m.Write(byte(80 | x86Regs[src]))
+func (w *x86mcw) PushReg(src uint16) {
+	w.m.Write(Bin8(80 | src))
 }
 
-func (w *x86mcw) Pop(dest string) {
-	w.m.Write(byte(88 | x86Regs[dest]))
+func (w *x86mcw) Pop(dst uint16) {
+	w.m.Write(Bin8(88 | dst))
 }
 
-func (w *x86mcw) CallReg(dest string) {
-	w.m.Write(uint16(53503 | x86Regs[dest] << 8)) // 110100RG11111111
+func (w *x86mcw) CallReg(dst uint16) {
+	w.m.Write(Bin16L(53503 | dst << 8)) // 110100RG11111111
 }

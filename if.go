@@ -1,14 +1,14 @@
 package ass
 
 type ExecutableFileMaker interface{
-	Write(data interface{})
+	Write([]byte)(int, error)
 	WrlabVA(string)
 }
 
 type MachineCodeWriter interface{
-	MovRegNum(string, interface{})
-	MovRegPtr(string, interface{}, uint8)
-	PushReg(string)
-	Pop(string)
-	CallReg(string)
+	MovRegNum(uint16, interface{})
+	MovRegPtr(uint16, interface{}, uint8)
+	PushReg(uint16)
+	Pop(uint16)
+	CallReg(uint16)
 }
