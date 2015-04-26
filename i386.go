@@ -5,9 +5,9 @@ import (
 	"fmt"
 )
 
-const MACHINE_X86 = 4
+const I386 = 4
 
-type x86 struct{
+type i386 struct{
 	m ExecutableFileMaker
 }
 
@@ -23,7 +23,7 @@ const (
 	ooReg = 3 //11
 )
 
-func (w *x86) swiol(iol interface{}, bnt BinNumTranslator) {
+func (w *i386) swiol(iol interface{}, bnt BinNumTranslator) {
 	switch v := iol.(type){
 		case int:
 			w.m.Write(bnt(v))
@@ -35,12 +35,12 @@ func (w *x86) swiol(iol interface{}, bnt BinNumTranslator) {
 	}
 }
 
-func (w *x86) MovRegImm(dst int, src interface{}) {
+func (w *i386) MovRegImm(dst int, src interface{}) {
 	w.m.Write(BinNum8(184 | dst)) //1011wrrr w=1 rrr=dst
 	w.swiol(src, BinNum32L)
 }
 
-func (w *x86) MovRegMem(dst int, src interface{}, byteSrc uint8) {
+func (w *i386) MovRegMem(dst int, src interface{}, byteSrc uint8) {
 	if dst == EAX {
 		w.m.Write(BinNum8(161))
 	}else{
@@ -49,18 +49,18 @@ func (w *x86) MovRegMem(dst int, src interface{}, byteSrc uint8) {
 	w.swiol(src, BinNum32L)
 }
 
-func (w *x86) MovRegReg(dst int, src int) {
+func (w *i386) MovRegReg(dst int, src int) {
 	w.m.Write(BinNum16B(35776 | ooReg << 6 | dst << 3 | src)) //1000101woorrrmmm w=1 oo=ooReg rrr=dst mmm=src
 }
 
-func (w *x86) PushReg(src int) {
+func (w *i386) PushReg(src int) {
 	w.m.Write(BinNum8(80 | src))
 }
 
-func (w *x86) Pop(dst int) {
+func (w *i386) Pop(dst int) {
 	w.m.Write(BinNum8(88 | dst))
 }
 
-func (w *x86) CallReg(dst int) {
+func (w *i386) CallReg(dst int) {
 	w.m.Write(BinNum16B(65488 | ooReg << 6 | dst)) //11111111oo010mmm oo=ooReg mmm=dst
 }

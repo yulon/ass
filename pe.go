@@ -30,14 +30,14 @@ func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, err
 		cpu: machine,
 	}
 	switch pe.cpu {
-		case MACHINE_X86:
-			pe.QpcodeWriter = &x86{
+		case I386:
+			pe.QpcodeWriter = &i386{
 				m: pe,
 			}
 			pe.bnt = BinNum32L
-		case MACHINE_X64:
+		case AMD64:
 			/*
-			pe.MachineCodeWriter = &x64{
+			pe.MachineCodeWriter = &amd64{
 				m: pe,
 			}*/
 			pe.bnt = BinNum64L
@@ -84,9 +84,9 @@ func (pe *PE) writeNTHeader() { // 248字节
 
 func (pe *PE) writeFileHeader() { // 20字节
 	switch pe.cpu {
-		case MACHINE_X86:
+		case I386:
 			pe.Write(BinNum16L(pe_IMAGE_FILE_MACHINE_I386)) // Machine
-		case MACHINE_X64:
+		case AMD64:
 			pe.Write(BinNum16L(pe_IMAGE_FILE_MACHINE_AMD64)) // Machine
 	}
 	pe.Write(BinNum16L(1)) // NumberOfSections
@@ -100,9 +100,9 @@ func (pe *PE) writeFileHeader() { // 20字节
 func (pe *PE) writeOptionalHeader() {
 	pe.Label("OptionalHeaderStart")
 	switch pe.cpu {
-		case MACHINE_X86:
+		case I386:
 			pe.Write(BinNum16L(pe_IMAGE_NT_OPTIONAL_HDR32_MAGIC)) // Magic
-		case MACHINE_X64:
+		case AMD64:
 			pe.Write(BinNum16L(pe_IMAGE_NT_OPTIONAL_HDR64_MAGIC)) // Magic
 	}
 	pe.Write(BinNum8(1)) // MajorLinkerVersion
@@ -112,7 +112,7 @@ func (pe *PE) writeOptionalHeader() {
 	pe.Write(BinNum32L(0)) // SizeOfUnInitializedData
 	pe.Write(BinNum32L(pe_RVA_SECTION)) // AddressOfEntryPoint
 	pe.Write(BinNum32L(pe_RVA_SECTION)) // BaseOfCode
-	if pe.cpu == MACHINE_X86 {
+	if pe.cpu == I386 {
 		pe.Write(BinNum32L(pe_RVA_SECTION)) // BaseOfData
 	}
 	pe.Write(pe.bnt(pe.imgBase)) // ImageBase

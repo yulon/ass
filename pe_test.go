@@ -7,7 +7,7 @@ import (
 )
 
 func TestPE32(*testing.T) {
-	exe, _ := CreatePE("test32.exe", MACHINE_X86, PE_IMAGEBASE_GENERAL, true)
+	exe, _ := CreatePE("test32.exe", I386, PE_IMAGEBASE_GENERAL, true)
 
 	exe.MovRegImm(EAX, "hw_string")
 	exe.PushReg(EAX)
@@ -25,7 +25,7 @@ func TestPE32(*testing.T) {
 }
 
 func TestPE64(*testing.T) {
-	exe, _ := CreatePE("test64.exe", MACHINE_X64, PE_IMAGEBASE_GENERAL, true)
+	exe, _ := CreatePE("test64.exe", AMD64, PE_IMAGEBASE_GENERAL, true)
 
 	exe.Write([]byte{72, 184})
 	exe.WrlabVA("hw_string", BinNum64L)
