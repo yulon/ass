@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-type FileWriteManager struct{
+type fileWriteManager struct{
 	*os.File
 	labels map[string]int64
 	pits []pit
@@ -22,8 +22,8 @@ type pit struct{
 	bnt BinNumTranslator
 }
 
-func NewFileWriteManager(f *os.File) *FileWriteManager {
-	fwm := &FileWriteManager{
+func newFileWriteManager(f *os.File) *fileWriteManager {
+	fwm := &fileWriteManager{
 		File: f,
 		labels: map[string]int64{},
 		pits: []pit{},
@@ -32,15 +32,15 @@ func NewFileWriteManager(f *os.File) *FileWriteManager {
 	return fwm
 }
 
-func (fwm *FileWriteManager) WriteSpace(count int) {
+func (fwm *fileWriteManager) WriteSpace(count int) {
 	fwm.Write(bytes.Repeat([]byte{0}, count))
 }
 
-func (fwm *FileWriteManager) Label(l string) {
+func (fwm *fileWriteManager) Label(l string) {
 	fwm.labels[l] = fwm.Len()
 }
 
-func (fwm *FileWriteManager) Len() int64 {
+func (fwm *fileWriteManager) Len() int64 {
 	fi, err := fwm.Stat()
 	if err != nil {
 		return 0
@@ -48,7 +48,7 @@ func (fwm *FileWriteManager) Len() int64 {
 	return int64(fi.Size())
 }
 
-func (fwm *FileWriteManager) WrlabOffset(startLabel string, endLabel string, added int64, bnt BinNumTranslator) {
+func (fwm *fileWriteManager) WrlabOffset(startLabel string, endLabel string, added int64, bnt BinNumTranslator) {
 	fwm.pits = append(fwm.pits, pit{
 		addr: fwm.Len(),
 		start: startLabel,
@@ -74,15 +74,15 @@ func (fwm *FileWriteManager) WrlabOffset(startLabel string, endLabel string, add
 	}
 }
 
-func (fwm *FileWriteManager) WrlabPointer(label string, bnt BinNumTranslator) {
+func (fwm *fileWriteManager) WrlabPointer(label string, bnt BinNumTranslator) {
 	fwm.WrlabOffset("", label, 0, bnt)
 }
 
-func (fwm *FileWriteManager) WrlabRelative(label string, bnt BinNumTranslator) {
+func (fwm *fileWriteManager) WrlabRelative(label string, bnt BinNumTranslator) {
 	fwm.WrlabOffset(label, "", 0, bnt)
 }
 
-func (fwm *FileWriteManager) Fill() error {
+func (fwm *fileWriteManager) Fill() error {
 	for i := 0; i < len(fwm.pits); i++ {
 		var start, end int64
 		var ok bool

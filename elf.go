@@ -21,8 +21,7 @@ const (
 )
 
 type ELF struct{
-	file *os.File
-	*FileWriteManager
+	*fileWriteManager
 	imps map[string]map[string]bool
 }
 
@@ -32,8 +31,7 @@ func CreateELF(path string) (*ELF, error) {
 		return nil, err
 	}
 	elf := &ELF{
-		file: f,
-		FileWriteManager: NewFileWriteManager(f),
+		fileWriteManager: newFileWriteManager(f),
 		imps: map[string]map[string]bool{},
 	}
 	return elf, nil

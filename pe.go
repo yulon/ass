@@ -6,8 +6,7 @@ import (
 )
 
 type PE struct{
-	file *os.File
-	*FileWriteManager
+	*fileWriteManager
 	QpcodeWriter
 	imps map[string]map[string]bool
 	imgBase int64
@@ -22,8 +21,7 @@ func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, err
 		return nil, err
 	}
 	pe := &PE{
-		file: f,
-		FileWriteManager: NewFileWriteManager(f),
+		fileWriteManager: newFileWriteManager(f),
 		imps: map[string]map[string]bool{},
 		imgBase: imageBase,
 		cui: console,
@@ -52,21 +50,21 @@ func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, err
 func (pe *PE) Close() error {
 	pe.writeImportDescriptors()
 	pe.sectionEnd()
-	err := pe.FileWriteManager.Fill()
+	err := pe.fileWriteManager.Fill()
 	if err != nil {
-		pe.file.Close()
+		pe.fileWriteManager.Close()
 		return err
 	}else{
-		return pe.file.Close()
+		return pe.fileWriteManager.Close()
 	}
 }
 
-func (pe *PE) WrlabRVA(mark string, bnt BinNumTranslator) {
-	pe.WrlabOffset("SectionStart", mark, pe_RVA_SECTION, bnt)
+func (pe *PE) WrlabRVA(label string, bnt BinNumTranslator) {
+	pe.WrlabOffset("SectionStart", label, pe_RVA_SECTION, bnt)
 }
 
-func (pe *PE) WrlabVA(mark string, bnt BinNumTranslator) {
-	pe.WrlabOffset("SectionStart", mark, pe.imgBase + pe_RVA_SECTION, bnt)
+func (pe *PE) WrlabVA(label string, bnt BinNumTranslator) {
+	pe.WrlabOffset("SectionStart", label, pe.imgBase + pe_RVA_SECTION, bnt)
 }
 
 func (pe *PE) writeDOSHeader() { // 64字节
