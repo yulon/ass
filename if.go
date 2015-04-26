@@ -6,9 +6,9 @@ type ExecutableFileMaker interface{
 }
 
 type MachineCodeWriter interface{
-	MovRegNum(uint16, interface{})
-	MovRegPtr(uint16, interface{}, uint8)
-	PushReg(uint16)
-	Pop(uint16)
-	CallReg(uint16)
+	MovRegNum(int, interface{})
+	MovRegPtr(int, interface{}, uint8)
+	PushReg(int)
+	Pop(int)
+	CallReg(int)
 }

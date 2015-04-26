@@ -20,6 +20,7 @@ const (
 	EDI = 7 //111
 	EBP = 5 //101
 	ESP = 4 //100
+	ooReg = 3 //11
 )
 
 func (w *x86mcw) swiol(iol interface{}) {
@@ -34,32 +35,32 @@ func (w *x86mcw) swiol(iol interface{}) {
 	}
 }
 
-func (w *x86mcw) MovRegNum(dst uint16, src interface{}) {
+func (w *x86mcw) MovRegNum(dst int, src interface{}) {
 	w.m.Write(Bin8(184 | dst))
 	w.swiol(src)
 }
 
-func (w *x86mcw) MovRegPtr(dst uint16, src interface{}, byteSrc uint8) {
+func (w *x86mcw) MovRegPtr(dst int, src interface{}, byteSrc uint8) {
 	if dst == EAX {
 		w.m.Write(Bin8(161))
 	}else{
-		w.m.Write(Bin16L(1419 | dst << 11)) // de10110001011
+		w.m.Write(Bin16B(35613 | dst << 3)) //1000101woorrrmmm w=1 oo=00 rrr=dst mmm=101
 	}
 	w.swiol(src)
 }
 
-func (w *x86mcw) MovRegReg(dst uint16, src uint16) {
-	w.m.Write(Bin16L(49289 | src << 11 | dst << 8)) // 110sr0de10001001
+func (w *x86mcw) MovRegReg(dst int, src int) {
+	w.m.Write(Bin16B(35776 | ooReg << 6 | dst << 3 | src)) //1000101woorrrmmm w=1 oo=ooReg rrr=dst mmm=src
 }
 
-func (w *x86mcw) PushReg(src uint16) {
+func (w *x86mcw) PushReg(src int) {
 	w.m.Write(Bin8(80 | src))
 }
 
-func (w *x86mcw) Pop(dst uint16) {
+func (w *x86mcw) Pop(dst int) {
 	w.m.Write(Bin8(88 | dst))
 }
 
-func (w *x86mcw) CallReg(dst uint16) {
-	w.m.Write(Bin16L(53503 | dst << 8)) // 110100RG11111111
+func (w *x86mcw) CallReg(dst int) {
+	w.m.Write(Bin16B(65488 | ooReg << 6 | dst)) //11111111oo010mmm oo=ooReg mmm=dst
 }
