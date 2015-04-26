@@ -12,10 +12,10 @@ func TestPE32(*testing.T) {
 	exe.MovRegImm(EAX, "hw_string")
 	exe.PushReg(EAX)
 
-	exe.MovRegMem(EAX, exe.DLLFnPtr("msvcrt.dll", "printf"), 4)
+	exe.MovRegMem(EAX, exe.DLLFuncPtr("msvcrt.dll", "printf"), 4)
 	exe.CallReg(EAX)
 
-	exe.MovRegMem(EAX, exe.DLLFnPtr("kernel32.dll", "ExitProcess"), 8)
+	exe.MovRegMem(EAX, exe.DLLFuncPtr("kernel32.dll", "ExitProcess"), 8)
 	exe.CallReg(EAX)
 
 	exe.Label("hw_string")
@@ -32,12 +32,12 @@ func TestPE64(*testing.T) {
 	exe.Write([]byte{72, 137, 193})
 
 	exe.Write([]byte{72, 184})
-	exe.WrlabVA(exe.DLLFnPtr("msvcrt.dll", "printf"), BinNum64L)
+	exe.WrlabVA(exe.DLLFuncPtr("msvcrt.dll", "printf"), BinNum64L)
 	exe.Write([]byte{72, 139, 00})
 	exe.Write([]byte{255, 208})
 
 	exe.Write([]byte{72, 184})
-	exe.WrlabVA(exe.DLLFnPtr("kernel32.dll", "ExitProcess"), BinNum64L)
+	exe.WrlabVA(exe.DLLFuncPtr("kernel32.dll", "ExitProcess"), BinNum64L)
 	exe.Write([]byte{72, 139, 00})
 	exe.Write([]byte{255, 208})
 

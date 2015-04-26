@@ -45,30 +45,30 @@ func (elf *ELF) writeELFHeader() {
 	elf.Write(BinNum8(elfDATA2LSB)) // EI_DATA
 	elf.Write(BinNum8(ev_CURRENT)) // EI_VERSION
 	elf.WriteSpace(8) // EI_PAD
-	elf.WrlabPointer("IdentEnd", BinNum8) // EI_NIDENT
-	elf.Label("IdentEnd")
+	elf.WrlabPointer("ELF.IdentEnd", BinNum8) // EI_NIDENT
+	elf.Label("ELF.IdentEnd")
 
 	elf.Write(BinNum16L(et_EXEC)) // e_type
 	elf.Write(BinNum16L(em_386)) // e_machine
 	elf.Write(BinNum32L(0)) // e_version
 	elf.Write(BinNum32L(0)) // e_entry
-	elf.WrlabPointer("ProgramHeaderTable", BinNum32L) // e_phoff
-	elf.WrlabPointer("SectionHeaderTable", BinNum32L) // e_shoff
+	elf.WrlabPointer("ELF.ProgramHeaderTable", BinNum32L) // e_phoff
+	elf.WrlabPointer("ELF.SectionHeaderTable", BinNum32L) // e_shoff
 	elf.Write(BinNum32L(0)) // e_flags
-	elf.WrlabPointer("ELFHeaderEnd", BinNum16L) // e_ehsize
+	elf.WrlabPointer("ELF.HeaderEnd", BinNum16L) // e_ehsize
 	elf.Write(BinNum16L(512)) // e_phentsize
 	elf.Write(BinNum16L(1)) // e_phnum
 	elf.Write(BinNum16L(512)) // e_shentsize
 	elf.Write(BinNum16L(1)) // e_shnum
 	elf.Write(BinNum16L(shn_UNDEF)) // e_shstrndx
-	elf.Label("ELFHeaderEnd")
+	elf.Label("ELF.HeaderEnd")
 }
 
 /*
 func (elf *ELF) writeProgramHeaderTable() {
-	elf.Label("ProgramHeaderTable")
+	elf.Label("ELF.ProgramHeaderTable")
 }
 
 func (elf *ELF) writeSectionHeaderTable() {
-	elf.Label("SectionHeaderTable")
+	elf.Label("ELF.SectionHeaderTable")
 }*/
