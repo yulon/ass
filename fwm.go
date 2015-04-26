@@ -19,7 +19,7 @@ type pit struct{
 	start string
 	end string
 	added int64
-	i2bf func(IntX)[]byte
+	bnt BinNumTranslator
 }
 
 func NewFileWriteManager(f *os.File) *FileWriteManager {
@@ -48,38 +48,38 @@ func (fwm *FileWriteManager) Len() int64 {
 	return int64(fi.Size())
 }
 
-func (fwm *FileWriteManager) WrlabOffset(startLabel string, endLabel string, added int64, i2bf func(IntX)[]byte) {
+func (fwm *FileWriteManager) WrlabOffset(startLabel string, endLabel string, added int64, bnt BinNumTranslator) {
 	fwm.pits = append(fwm.pits, pit{
 		addr: fwm.Len(),
 		start: startLabel,
 		end: endLabel,
 		added: added,
-		i2bf: i2bf,
+		bnt: bnt,
 	})
-	switch fmt.Sprint(i2bf) {
-		case fmt.Sprint(Bin8):
+	switch fmt.Sprint(bnt) {
+		case fmt.Sprint(BinNum8):
 			fwm.WriteSpace(1)
-		case fmt.Sprint(Bin16L):
+		case fmt.Sprint(BinNum16L):
 			fwm.WriteSpace(2)
-		case fmt.Sprint(Bin32L):
+		case fmt.Sprint(BinNum32L):
 			fwm.WriteSpace(4)
-		case fmt.Sprint(Bin64L):
+		case fmt.Sprint(BinNum64L):
 			fwm.WriteSpace(8)
-		case fmt.Sprint(Bin16B):
+		case fmt.Sprint(BinNum16B):
 			fwm.WriteSpace(2)
-		case fmt.Sprint(Bin32B):
+		case fmt.Sprint(BinNum32B):
 			fwm.WriteSpace(4)
-		case fmt.Sprint(Bin64B):
+		case fmt.Sprint(BinNum64B):
 			fwm.WriteSpace(8)
 	}
 }
 
-func (fwm *FileWriteManager) WrlabPointer(label string, i2bf func(IntX)[]byte) {
-	fwm.WrlabOffset("", label, 0, i2bf)
+func (fwm *FileWriteManager) WrlabPointer(label string, bnt BinNumTranslator) {
+	fwm.WrlabOffset("", label, 0, bnt)
 }
 
-func (fwm *FileWriteManager) WrlabRelative(label string, i2bf func(IntX)[]byte) {
-	fwm.WrlabOffset(label, "", 0, i2bf)
+func (fwm *FileWriteManager) WrlabRelative(label string, bnt BinNumTranslator) {
+	fwm.WrlabOffset(label, "", 0, bnt)
 }
 
 func (fwm *FileWriteManager) Fill() error {
@@ -106,7 +106,7 @@ func (fwm *FileWriteManager) Fill() error {
 		}
 
 		n := end - start + fwm.pits[i].added
-		fwm.WriteAt(fwm.pits[i].i2bf(n), fwm.pits[i].addr)
+		fwm.WriteAt(fwm.pits[i].bnt(n), fwm.pits[i].addr)
 	}
 	return nil
 }

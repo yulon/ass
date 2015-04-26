@@ -4,10 +4,10 @@ import (
 	"encoding/binary"
 )
 
-type IntX interface{}
+type BinNumTranslator func(interface{})[]byte
 
-func Bin8(intx IntX) (bin []byte) {
-	switch n := intx.(type){
+func BinNum8(num interface{}) (bin []byte) {
+	switch n := num.(type){
 		case int:
 			bin = []byte{uint8(n)}
 		case int8:
@@ -30,9 +30,9 @@ func Bin8(intx IntX) (bin []byte) {
 	return
 }
 
-func bin16(intx IntX, bo binary.ByteOrder) []byte {
+func binNum16(num interface{}, bo binary.ByteOrder) []byte {
 	bin := make([]byte, 8, 8)
-	switch n := intx.(type){
+	switch n := num.(type){
 		case int:
 			bo.PutUint16(bin, uint16(n))
 		case int8:
@@ -55,9 +55,9 @@ func bin16(intx IntX, bo binary.ByteOrder) []byte {
 	return bin[:2]
 }
 
-func bin32(intx IntX, bo binary.ByteOrder) []byte {
+func binNum32(num interface{}, bo binary.ByteOrder) []byte {
 	bin := make([]byte, 8, 8)
-	switch n := intx.(type){
+	switch n := num.(type){
 		case int:
 			bo.PutUint32(bin, uint32(n))
 		case int8:
@@ -80,9 +80,9 @@ func bin32(intx IntX, bo binary.ByteOrder) []byte {
 	return bin[:4]
 }
 
-func bin64(intx IntX, bo binary.ByteOrder) []byte {
+func binNum64(num interface{}, bo binary.ByteOrder) []byte {
 	bin := make([]byte, 8, 8)
-	switch n := intx.(type){
+	switch n := num.(type){
 		case int:
 			bo.PutUint64(bin, uint64(n))
 		case int8:
@@ -105,28 +105,28 @@ func bin64(intx IntX, bo binary.ByteOrder) []byte {
 	return bin
 }
 
-func Bin16L(intx IntX) []byte {
-	return bin16(intx, binary.LittleEndian)
+func BinNum16L(num interface{}) []byte {
+	return binNum16(num, binary.LittleEndian)
 }
 
-func Bin32L(intx IntX) []byte {
-	return bin32(intx, binary.LittleEndian)
+func BinNum32L(num interface{}) []byte {
+	return binNum32(num, binary.LittleEndian)
 }
 
-func Bin64L(intx IntX) []byte {
-	return bin64(intx, binary.LittleEndian)
+func BinNum64L(num interface{}) []byte {
+	return binNum64(num, binary.LittleEndian)
 }
 
-func Bin16B(intx IntX) []byte {
-	return bin16(intx, binary.BigEndian)
+func BinNum16B(num interface{}) []byte {
+	return binNum16(num, binary.BigEndian)
 }
 
-func Bin32B(intx IntX) []byte {
-	return bin32(intx, binary.BigEndian)
+func BinNum32B(num interface{}) []byte {
+	return binNum32(num, binary.BigEndian)
 }
 
-func Bin64B(intx IntX) []byte {
-	return bin64(intx, binary.BigEndian)
+func BinNum64B(num interface{}) []byte {
+	return binNum64(num, binary.BigEndian)
 }
 
 func Chars(text string) []byte {

@@ -2,7 +2,7 @@ package ass
 
 type ExecutableFileMaker interface{
 	Write([]byte)(int, error)
-	WrlabVA(string)
+	WrlabVA(string, BinNumTranslator)
 }
 
 type QpcodeWriter interface{

@@ -28,16 +28,16 @@ func TestPE64(*testing.T) {
 	exe, _ := CreatePE("test64.exe", MACHINE_X64, PE_IMAGEBASE_GENERAL, true)
 
 	exe.Write([]byte{72, 184})
-	exe.WrlabVA("hw_string")
+	exe.WrlabVA("hw_string", BinNum64L)
 	exe.Write([]byte{72, 137, 193})
 
 	exe.Write([]byte{72, 184})
-	exe.WrlabVA(exe.DLLFnPtr("msvcrt.dll", "printf"))
+	exe.WrlabVA(exe.DLLFnPtr("msvcrt.dll", "printf"), BinNum64L)
 	exe.Write([]byte{72, 139, 00})
 	exe.Write([]byte{255, 208})
 
 	exe.Write([]byte{72, 184})
-	exe.WrlabVA(exe.DLLFnPtr("kernel32.dll", "ExitProcess"))
+	exe.WrlabVA(exe.DLLFnPtr("kernel32.dll", "ExitProcess"), BinNum64L)
 	exe.Write([]byte{72, 139, 00})
 	exe.Write([]byte{255, 208})
 
