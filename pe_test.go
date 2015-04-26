@@ -9,13 +9,13 @@ import (
 func TestPE32(*testing.T) {
 	exe, _ := CreatePE("test32.exe", MACHINE_X86, PE_IMAGEBASE_GENERAL, true)
 
-	exe.MovRegNum(EAX, "hw_string")
+	exe.MovRegImm(EAX, "hw_string")
 	exe.PushReg(EAX)
 
-	exe.MovRegPtr(EAX, exe.DLLFnPtr("msvcrt.dll", "printf"), 4)
+	exe.MovRegMem(EAX, exe.DLLFnPtr("msvcrt.dll", "printf"), 4)
 	exe.CallReg(EAX)
 
-	exe.MovRegPtr(EAX, exe.DLLFnPtr("kernel32.dll", "ExitProcess"), 8)
+	exe.MovRegMem(EAX, exe.DLLFnPtr("kernel32.dll", "ExitProcess"), 8)
 	exe.CallReg(EAX)
 
 	exe.Label("hw_string")

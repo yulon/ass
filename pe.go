@@ -8,7 +8,7 @@ import (
 type PE struct{
 	file *os.File
 	*FileWriteManager
-	MachineCodeWriter
+	QpcodeWriter
 	imps map[string]map[string]bool
 	imgBase int64
 	cui bool
@@ -31,7 +31,7 @@ func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, err
 	}
 	switch pe.cpu {
 		case MACHINE_X86:
-			pe.MachineCodeWriter = &x86mcw{
+			pe.QpcodeWriter = &x86{
 				m: pe,
 			}
 			pe.i2bf = Bin32L

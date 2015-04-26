@@ -5,9 +5,9 @@ type ExecutableFileMaker interface{
 	WrlabVA(string)
 }
 
-type MachineCodeWriter interface{
-	MovRegNum(int, interface{})
-	MovRegPtr(int, interface{}, uint8)
+type QpcodeWriter interface{
+	MovRegImm(int, interface{})
+	MovRegMem(int, interface{}, uint8)
 	PushReg(int)
 	Pop(int)
 	CallReg(int)

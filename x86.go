@@ -7,7 +7,7 @@ import (
 
 const MACHINE_X86 = 4
 
-type x86mcw struct{
+type x86 struct{
 	m ExecutableFileMaker
 }
 
@@ -23,7 +23,7 @@ const (
 	ooReg = 3 //11
 )
 
-func (w *x86mcw) swiol(iol interface{}) {
+func (w *x86) swiol(iol interface{}) {
 	switch v := iol.(type){
 		case int:
 			w.m.Write(Bin32L(v))
@@ -35,12 +35,12 @@ func (w *x86mcw) swiol(iol interface{}) {
 	}
 }
 
-func (w *x86mcw) MovRegNum(dst int, src interface{}) {
-	w.m.Write(Bin8(184 | dst))
+func (w *x86) MovRegImm(dst int, src interface{}) {
+	w.m.Write(Bin8(184 | dst)) //1011wrrr w=1 rrr=dst
 	w.swiol(src)
 }
 
-func (w *x86mcw) MovRegPtr(dst int, src interface{}, byteSrc uint8) {
+func (w *x86) MovRegMem(dst int, src interface{}, byteSrc uint8) {
 	if dst == EAX {
 		w.m.Write(Bin8(161))
 	}else{
@@ -49,18 +49,18 @@ func (w *x86mcw) MovRegPtr(dst int, src interface{}, byteSrc uint8) {
 	w.swiol(src)
 }
 
-func (w *x86mcw) MovRegReg(dst int, src int) {
+func (w *x86) MovRegReg(dst int, src int) {
 	w.m.Write(Bin16B(35776 | ooReg << 6 | dst << 3 | src)) //1000101woorrrmmm w=1 oo=ooReg rrr=dst mmm=src
 }
 
-func (w *x86mcw) PushReg(src int) {
+func (w *x86) PushReg(src int) {
 	w.m.Write(Bin8(80 | src))
 }
 
-func (w *x86mcw) Pop(dst int) {
+func (w *x86) Pop(dst int) {
 	w.m.Write(Bin8(88 | dst))
 }
 
-func (w *x86mcw) CallReg(dst int) {
+func (w *x86) CallReg(dst int) {
 	w.m.Write(Bin16B(65488 | ooReg << 6 | dst)) //11111111oo010mmm oo=ooReg mmm=dst
 }
