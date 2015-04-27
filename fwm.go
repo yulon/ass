@@ -2,7 +2,6 @@ package ass
 
 import (
 	"os"
-	"bytes"
 	"errors"
 	"fmt"
 )
@@ -19,7 +18,7 @@ type pit struct{
 	start string
 	end string
 	added int64
-	bnt BinNumTranslator
+	numPut NumPut
 }
 
 func newFileWriteManager(f *os.File) *fileWriteManager {
@@ -30,10 +29,6 @@ func newFileWriteManager(f *os.File) *fileWriteManager {
 	}
 	fwm.start = fwm.Len()
 	return fwm
-}
-
-func (fwm *fileWriteManager) WriteSpace(count int) {
-	fwm.Write(bytes.Repeat([]byte{0}, count))
 }
 
 func (fwm *fileWriteManager) Label(l string) {
@@ -48,41 +43,41 @@ func (fwm *fileWriteManager) Len() int64 {
 	return int64(fi.Size())
 }
 
-func (fwm *fileWriteManager) WrlabOffset(startLabel string, endLabel string, added int64, bnt BinNumTranslator) {
+func (fwm *fileWriteManager) PitOffset(startLabel string, endLabel string, added int64, numPut NumPut) {
 	fwm.pits = append(fwm.pits, pit{
 		addr: fwm.Len(),
 		start: startLabel,
 		end: endLabel,
 		added: added,
-		bnt: bnt,
+		numPut: numPut,
 	})
-	switch fmt.Sprint(bnt) {
-		case fmt.Sprint(BinNum8):
-			fwm.WriteSpace(1)
-		case fmt.Sprint(BinNum16L):
-			fwm.WriteSpace(2)
-		case fmt.Sprint(BinNum32L):
-			fwm.WriteSpace(4)
-		case fmt.Sprint(BinNum64L):
-			fwm.WriteSpace(8)
-		case fmt.Sprint(BinNum16B):
-			fwm.WriteSpace(2)
-		case fmt.Sprint(BinNum32B):
-			fwm.WriteSpace(4)
-		case fmt.Sprint(BinNum64B):
-			fwm.WriteSpace(8)
+	switch fmt.Sprint(numPut) {
+		case fmt.Sprint(Num8):
+			fwm.Write(Zeros(1))
+		case fmt.Sprint(Num16L):
+			fwm.Write(Zeros(2))
+		case fmt.Sprint(Num32L):
+			fwm.Write(Zeros(4))
+		case fmt.Sprint(Num64L):
+			fwm.Write(Zeros(8))
+		case fmt.Sprint(Num16B):
+			fwm.Write(Zeros(2))
+		case fmt.Sprint(Num32B):
+			fwm.Write(Zeros(4))
+		case fmt.Sprint(Num64B):
+			fwm.Write(Zeros(8))
 	}
 }
 
-func (fwm *fileWriteManager) WrlabPointer(label string, bnt BinNumTranslator) {
-	fwm.WrlabOffset("", label, 0, bnt)
+func (fwm *fileWriteManager) PitPointer(label string, numPut NumPut) {
+	fwm.PitOffset("", label, 0, numPut)
 }
 
-func (fwm *fileWriteManager) WrlabRelative(label string, bnt BinNumTranslator) {
-	fwm.WrlabOffset(label, "", 0, bnt)
+func (fwm *fileWriteManager) PitRelative(label string, numPut NumPut) {
+	fwm.PitOffset(label, "", 0, numPut)
 }
 
-func (fwm *fileWriteManager) Fill() error {
+func (fwm *fileWriteManager) Close() error {
 	for i := 0; i < len(fwm.pits); i++ {
 		var start, end int64
 		var ok bool
@@ -106,7 +101,7 @@ func (fwm *fileWriteManager) Fill() error {
 		}
 
 		n := end - start + fwm.pits[i].added
-		fwm.WriteAt(fwm.pits[i].bnt(n), fwm.pits[i].addr)
+		fwm.WriteAt(fwm.pits[i].numPut(n), fwm.pits[i].addr)
 	}
 	return nil
 }

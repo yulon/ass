@@ -1,12 +1,13 @@
 package ass
 
 import (
+	"bytes"
 	"encoding/binary"
 )
 
-type BinNumTranslator func(interface{})[]byte
+type NumPut func(interface{})[]byte
 
-func BinNum8(num interface{}) (bin []byte) {
+func Num8(num interface{}) (bin []byte) {
 	switch n := num.(type){
 		case int:
 			bin = []byte{uint8(n)}
@@ -30,7 +31,7 @@ func BinNum8(num interface{}) (bin []byte) {
 	return
 }
 
-func binNum16(num interface{}, bo binary.ByteOrder) []byte {
+func num16(num interface{}, bo binary.ByteOrder) []byte {
 	bin := make([]byte, 8, 8)
 	switch n := num.(type){
 		case int:
@@ -55,7 +56,7 @@ func binNum16(num interface{}, bo binary.ByteOrder) []byte {
 	return bin[:2]
 }
 
-func binNum32(num interface{}, bo binary.ByteOrder) []byte {
+func num32(num interface{}, bo binary.ByteOrder) []byte {
 	bin := make([]byte, 8, 8)
 	switch n := num.(type){
 		case int:
@@ -80,7 +81,7 @@ func binNum32(num interface{}, bo binary.ByteOrder) []byte {
 	return bin[:4]
 }
 
-func binNum64(num interface{}, bo binary.ByteOrder) []byte {
+func num64(num interface{}, bo binary.ByteOrder) []byte {
 	bin := make([]byte, 8, 8)
 	switch n := num.(type){
 		case int:
@@ -105,28 +106,28 @@ func binNum64(num interface{}, bo binary.ByteOrder) []byte {
 	return bin
 }
 
-func BinNum16L(num interface{}) []byte {
-	return binNum16(num, binary.LittleEndian)
+func Num16L(num interface{}) []byte {
+	return num16(num, binary.LittleEndian)
 }
 
-func BinNum32L(num interface{}) []byte {
-	return binNum32(num, binary.LittleEndian)
+func Num32L(num interface{}) []byte {
+	return num32(num, binary.LittleEndian)
 }
 
-func BinNum64L(num interface{}) []byte {
-	return binNum64(num, binary.LittleEndian)
+func Num64L(num interface{}) []byte {
+	return num64(num, binary.LittleEndian)
 }
 
-func BinNum16B(num interface{}) []byte {
-	return binNum16(num, binary.BigEndian)
+func Num16B(num interface{}) []byte {
+	return num16(num, binary.BigEndian)
 }
 
-func BinNum32B(num interface{}) []byte {
-	return binNum32(num, binary.BigEndian)
+func Num32B(num interface{}) []byte {
+	return num32(num, binary.BigEndian)
 }
 
-func BinNum64B(num interface{}) []byte {
-	return binNum64(num, binary.BigEndian)
+func Num64B(num interface{}) []byte {
+	return num64(num, binary.BigEndian)
 }
 
 func Chars(text string) []byte {
@@ -143,4 +144,8 @@ func Chars64(text string) (bin []byte) {
 	bin = make([]byte, 8, 8)
 	copy(bin, []byte(text))
 	return
+}
+
+func Zeros(size int) []byte {
+	return bytes.Repeat([]byte{0}, size)
 }
