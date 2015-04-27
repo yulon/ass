@@ -6,8 +6,8 @@ import (
 )
 
 type PE struct{
-	*os.File
-	fwm *fileWriteManager
+	f *os.File
+	l *labeler
 	QpcodeWriter
 	imps map[string]map[string]bool
 	imgBase int64
@@ -22,8 +22,8 @@ func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, err
 		return nil, err
 	}
 	pe := &PE{
-		File: f,
-		fwm: newFileWriteManager(f),
+		f: f,
+		l: newLabeler(f),
 		imps: map[string]map[string]bool{},
 		imgBase: imageBase,
 		cui: console,
@@ -50,29 +50,29 @@ func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, err
 }
 
 func (pe *PE) Close() error {
-	defer pe.File.Close()
+	defer pe.f.Close()
 	pe.writeImportDescriptors()
 	pe.sectionEnd()
-	return pe.fwm.Close()
+	return pe.l.Close()
 }
 
 func (pe *PE) pitRVA(label string, numPut NumPut) {
-	pe.fwm.PitOffset("PE.SectionStart", label, pe_RVA_SECTION, numPut)
+	pe.l.PitOffset("PE.SectionStart", label, pe_RVA_SECTION, numPut)
 }
 
 func (pe *PE) pitVA(label string, numPut NumPut) {
-	pe.fwm.PitOffset("PE.SectionStart", label, pe.imgBase + pe_RVA_SECTION, numPut)
+	pe.l.PitOffset("PE.SectionStart", label, pe.imgBase + pe_RVA_SECTION, numPut)
 }
 
 func (pe *PE) writeDOSHeader() { // 64字节
-	pe.Write([]byte("MZ")) // e_magic
-	pe.Write(Zeros(58))
-	pe.fwm.PitPointer("PE.NTHeaders", Num32L) // e_lfanew
+	pe.f.Write([]byte("MZ")) // e_magic
+	pe.f.Write(Zeros(58))
+	pe.l.PitPointer("PE.NTHeaders", Num32L) // e_lfanew
 }
 
 func (pe *PE) writeNTHeader() { // 248字节
-	pe.fwm.Label("PE.NTHeaders")
-	pe.Write(Chars32("PE"))
+	pe.l.Label("PE.NTHeaders")
+	pe.f.Write(Chars32("PE"))
 	pe.writeFileHeader()
 	pe.writeOptionalHeader()
 }
@@ -80,104 +80,104 @@ func (pe *PE) writeNTHeader() { // 248字节
 func (pe *PE) writeFileHeader() { // 20字节
 	switch pe.cpu {
 		case I386:
-			pe.Write(Num16L(pe_IMAGE_FILE_MACHINE_I386)) // Machine
+			pe.f.Write(Num16L(pe_IMAGE_FILE_MACHINE_I386)) // Machine
 		case AMD64:
-			pe.Write(Num16L(pe_IMAGE_FILE_MACHINE_AMD64)) // Machine
+			pe.f.Write(Num16L(pe_IMAGE_FILE_MACHINE_AMD64)) // Machine
 	}
-	pe.Write(Num16L(1)) // NumberOfSections
-	pe.Write(Num32L(time.Now().Unix())) // TimeDateStamp
-	pe.Write(Num32L(0)) // PointerToSymbolTable
-	pe.Write(Num32L(0)) // NumberOfSymbols
-	pe.fwm.PitOffset("PE.OptionalHeaderStart", "PE.OptionalHeaderEnd", 0, Num16L) // SizeOfOptionalHeader
-	pe.Write(Num16L(pe_IMAGE_FILE_EXECUTABLE_IMAGE | pe_IMAGE_FILE_LINE_NUMS_STRIPPED | pe_IMAGE_FILE_LOCAL_SYMS_STRIPPED | pe_IMAGE_FILE_LARGE_ADDRESS_AWARE | pe_IMAGE_FILE_DEBUG_STRIPPED)) // Characteristics
+	pe.f.Write(Num16L(1)) // NumberOfSections
+	pe.f.Write(Num32L(time.Now().Unix())) // TimeDateStamp
+	pe.f.Write(Num32L(0)) // PointerToSymbolTable
+	pe.f.Write(Num32L(0)) // NumberOfSymbols
+	pe.l.PitOffset("PE.OptionalHeaderStart", "PE.OptionalHeaderEnd", 0, Num16L) // SizeOfOptionalHeader
+	pe.f.Write(Num16L(pe_IMAGE_FILE_EXECUTABLE_IMAGE | pe_IMAGE_FILE_LINE_NUMS_STRIPPED | pe_IMAGE_FILE_LOCAL_SYMS_STRIPPED | pe_IMAGE_FILE_LARGE_ADDRESS_AWARE | pe_IMAGE_FILE_DEBUG_STRIPPED)) // Characteristics
 }
 
 func (pe *PE) writeOptionalHeader() {
-	pe.fwm.Label("PE.OptionalHeaderStart")
+	pe.l.Label("PE.OptionalHeaderStart")
 	switch pe.cpu {
 		case I386:
-			pe.Write(Num16L(pe_IMAGE_NT_OPTIONAL_HDR32_MAGIC)) // Magic
+			pe.f.Write(Num16L(pe_IMAGE_NT_OPTIONAL_HDR32_MAGIC)) // Magic
 		case AMD64:
-			pe.Write(Num16L(pe_IMAGE_NT_OPTIONAL_HDR64_MAGIC)) // Magic
+			pe.f.Write(Num16L(pe_IMAGE_NT_OPTIONAL_HDR64_MAGIC)) // Magic
 	}
-	pe.Write(Num8(1)) // MajorLinkerVersion
-	pe.Write(Num8(0)) // MinerLinkerVersion
-	pe.fwm.PitOffset("PE.SectionStart", "PE.SectionEnd", 0, Num32L) // SizeOfCode
-	pe.Write(Num32L(0)) // SizeOfInitializedData
-	pe.Write(Num32L(0)) // SizeOfUnInitializedData
-	pe.Write(Num32L(pe_RVA_SECTION)) // AddressOfEntryPoint
-	pe.Write(Num32L(pe_RVA_SECTION)) // BaseOfCode
+	pe.f.Write(Num8(1)) // MajorLinkerVersion
+	pe.f.Write(Num8(0)) // MinerLinkerVersion
+	pe.l.PitOffset("PE.SectionStart", "PE.SectionEnd", 0, Num32L) // SizeOfCode
+	pe.f.Write(Num32L(0)) // SizeOfInitializedData
+	pe.f.Write(Num32L(0)) // SizeOfUnInitializedData
+	pe.f.Write(Num32L(pe_RVA_SECTION)) // AddressOfEntryPoint
+	pe.f.Write(Num32L(pe_RVA_SECTION)) // BaseOfCode
 	if pe.cpu == I386 {
-		pe.Write(Num32L(pe_RVA_SECTION)) // BaseOfData
+		pe.f.Write(Num32L(pe_RVA_SECTION)) // BaseOfData
 	}
-	pe.Write(pe.numPut(pe.imgBase)) // ImageBase
-	pe.Write(Num32L(pe_ALIGNMENT_IMAGE)) // SectionAlignment
-	pe.Write(Num32L(pe_ALIGNMENT_FILE)) // FileAlignment
-	pe.Write(Num16L(5)) // MajorOperatingSystemVersion
-	pe.Write(Num16L(1)) // MinorOperatingSystemVersion
-	pe.Write(Num16L(0)) // MajorImageVersion
-	pe.Write(Num16L(0)) // MinorImageVersion
-	pe.Write(Num16L(5)) // MajorSubsystemVersion
-	pe.Write(Num16L(1)) // MinorSubsystemVersion
-	pe.Write(Num32L(0)) // Win32VersionValue
-	pe.fwm.PitOffset("PE.SectionStart", "PE.SectionAlignEnd", pe_RVA_SECTION, Num32L) // SizeOfImage
-	pe.fwm.PitPointer("PE.SectionStart", Num32L) // SizeOfHeaders
-	pe.Write(Num32L(0)) // CheckSum
+	pe.f.Write(pe.numPut(pe.imgBase)) // ImageBase
+	pe.f.Write(Num32L(pe_ALIGNMENT_IMAGE)) // SectionAlignment
+	pe.f.Write(Num32L(pe_ALIGNMENT_FILE)) // FileAlignment
+	pe.f.Write(Num16L(5)) // MajorOperatingSystemVersion
+	pe.f.Write(Num16L(1)) // MinorOperatingSystemVersion
+	pe.f.Write(Num16L(0)) // MajorImageVersion
+	pe.f.Write(Num16L(0)) // MinorImageVersion
+	pe.f.Write(Num16L(5)) // MajorSubsystemVersion
+	pe.f.Write(Num16L(1)) // MinorSubsystemVersion
+	pe.f.Write(Num32L(0)) // Win32VersionValue
+	pe.l.PitOffset("PE.SectionStart", "PE.SectionAlignEnd", pe_RVA_SECTION, Num32L) // SizeOfImage
+	pe.l.PitPointer("PE.SectionStart", Num32L) // SizeOfHeaders
+	pe.f.Write(Num32L(0)) // CheckSum
 	if pe.cui {
-		pe.Write(Num16L(pe_IMAGE_SUBSYSTEM_WINDOWS_CUI)) // Subsystem
+		pe.f.Write(Num16L(pe_IMAGE_SUBSYSTEM_WINDOWS_CUI)) // Subsystem
 	}else{
-		pe.Write(Num16L(pe_IMAGE_SUBSYSTEM_WINDOWS_GUI)) // Subsystem
+		pe.f.Write(Num16L(pe_IMAGE_SUBSYSTEM_WINDOWS_GUI)) // Subsystem
 	}
-	pe.Write(Num16L(0)) // DllCharacteristics
-	pe.Write(pe.numPut(65536)) // SizeOfStackReserve
-	pe.Write(pe.numPut(4096)) // SizeOfStackCommit
-	pe.Write(pe.numPut(65536)) // SizeOfHeapReserve
-	pe.Write(pe.numPut(4096)) // SizeOfHeapCommit
-	pe.Write(Num32L(0)) // LoaderFlags
-	pe.Write(Num32L(16)) // NumberOfRvaAndSizes
+	pe.f.Write(Num16L(0)) // DllCharacteristics
+	pe.f.Write(pe.numPut(65536)) // SizeOfStackReserve
+	pe.f.Write(pe.numPut(4096)) // SizeOfStackCommit
+	pe.f.Write(pe.numPut(65536)) // SizeOfHeapReserve
+	pe.f.Write(pe.numPut(4096)) // SizeOfHeapCommit
+	pe.f.Write(Num32L(0)) // LoaderFlags
+	pe.f.Write(Num32L(16)) // NumberOfRvaAndSizes
 
 	for i := 0; i < 16; i++ {
 		// IMAGE_DATA_DIRECTORY
 		if i == pe_IMAGE_DIRECTORY_ENTRY_IMPORT {
 			pe.pitRVA("PE.ImportDescriptors", Num32L) // VirtualAddress
-			pe.Write(Num32L(40)) // Size
+			pe.f.Write(Num32L(40)) // Size
 		}else{
-			pe.Write(Num32L(0)) // VirtualAddress
-			pe.Write(Num32L(0)) // Size
+			pe.f.Write(Num32L(0)) // VirtualAddress
+			pe.f.Write(Num32L(0)) // Size
 		}
 	}
-	pe.fwm.Label("PE.OptionalHeaderEnd")
+	pe.l.Label("PE.OptionalHeaderEnd")
 }
 
 func (pe *PE) writeSectionHeader() error {
-	pe.Write(Chars64(".codata")) // Name
-	pe.fwm.PitOffset("PE.SectionStart", "PE.SectionEnd", 0, Num32L) // VirtualSize
-	pe.Write(Num32L(pe_RVA_SECTION)) // VirtualAddress
-	pe.fwm.PitOffset("PE.SectionStart", "PE.SectionAlignEnd", 0, Num32L) // SizeOfRawData
-	pe.fwm.PitPointer("PE.SectionStart", Num32L) // PointerToRawData
-	pe.Write(Num32L(0)) // PointerToRelocations
-	pe.Write(Num32L(0)) // PointerToLinenumbers
-	pe.Write(Num16L(0)) // NumberOfRelocations
-	pe.Write(Num16L(0)) // NumberOfLinenumbers
-	pe.Write(Num32L(pe_IMAGE_SCN_CNT_CODE | pe_IMAGE_SCN_MEM_EXECUTE | pe_IMAGE_SCN_MEM_READ | pe_IMAGE_SCN_CNT_INITIALIZED_DATA)) // Characteristics
+	pe.f.Write(Chars64(".codata")) // Name
+	pe.l.PitOffset("PE.SectionStart", "PE.SectionEnd", 0, Num32L) // VirtualSize
+	pe.f.Write(Num32L(pe_RVA_SECTION)) // VirtualAddress
+	pe.l.PitOffset("PE.SectionStart", "PE.SectionAlignEnd", 0, Num32L) // SizeOfRawData
+	pe.l.PitPointer("PE.SectionStart", Num32L) // PointerToRawData
+	pe.f.Write(Num32L(0)) // PointerToRelocations
+	pe.f.Write(Num32L(0)) // PointerToLinenumbers
+	pe.f.Write(Num16L(0)) // NumberOfRelocations
+	pe.f.Write(Num16L(0)) // NumberOfLinenumbers
+	pe.f.Write(Num32L(pe_IMAGE_SCN_CNT_CODE | pe_IMAGE_SCN_MEM_EXECUTE | pe_IMAGE_SCN_MEM_READ | pe_IMAGE_SCN_CNT_INITIALIZED_DATA)) // Characteristics
 	return nil
 }
 
 func (pe *PE) sectionStart() {
-	m := pe.fwm.Len() % pe_ALIGNMENT_FILE
+	m := fSize(pe.f) % pe_ALIGNMENT_FILE
 	if m > 0 {
-		pe.Write(Zeros(int(pe_ALIGNMENT_FILE - m)))
+		pe.f.Write(Zeros(int(pe_ALIGNMENT_FILE - m)))
 	}
-	pe.fwm.Label("PE.SectionStart")
+	pe.l.Label("PE.SectionStart")
 }
 
 func (pe *PE) sectionEnd() {
-	pe.fwm.Label("PE.SectionEnd")
-	m := pe.fwm.Len() % pe_ALIGNMENT_FILE
+	pe.l.Label("PE.SectionEnd")
+	m := fSize(pe.f) % pe_ALIGNMENT_FILE
 	if m > 0 {
-		pe.Write(Zeros(int(pe_ALIGNMENT_FILE - m)))
+		pe.f.Write(Zeros(int(pe_ALIGNMENT_FILE - m)))
 	}
-	pe.fwm.Label("PE.SectionAlignEnd")
+	pe.l.Label("PE.SectionAlignEnd")
 }
 
 func (pe *PE) DLLFuncPtr(dll string, function string) string {
@@ -190,32 +190,32 @@ func (pe *PE) DLLFuncPtr(dll string, function string) string {
 }
 
 func (pe *PE) writeImportDescriptors() {
-	pe.fwm.Label("PE.ImportDescriptors")
+	pe.l.Label("PE.ImportDescriptors")
 	for dll, _ := range pe.imps { // 输出 IMAGE_IMPORT_DESCRIPTOR 数组
 		pe.pitRVA("DLL." + dll + ".Thunk", Num32L) // OriginalFirstThunk
-		pe.Write(Num32L(0)) // TimeDateStamp
-		pe.Write(Num32L(0)) // ForwarderChain
+		pe.f.Write(Num32L(0)) // TimeDateStamp
+		pe.f.Write(Num32L(0)) // ForwarderChain
 		pe.pitRVA("DLL." + dll + ".Name", Num32L) // Name
 		pe.pitRVA("DLL." + dll + ".Thunk", Num32L) // FirstThunk
 	}
-	pe.Write(Zeros(pe_IMPORT_DESCRIPTOR_SIZE)) // 尾 IMAGE_IMPORT_DESCRIPTOR
+	pe.f.Write(Zeros(pe_IMPORT_DESCRIPTOR_SIZE)) // 尾 IMAGE_IMPORT_DESCRIPTOR
 
 	for dll, funcs := range pe.imps {
-		pe.fwm.Label("DLL." + dll + ".Name")
-		pe.Write(Chars(dll))
+		pe.l.Label("DLL." + dll + ".Name")
+		pe.f.Write(Chars(dll))
 
-		pe.fwm.Label("DLL." + dll + ".Thunk")
+		pe.l.Label("DLL." + dll + ".Thunk")
 		for function, _ := range funcs {
-			pe.fwm.Label("DLLFunc." + dll + "." + function + ".Ptr")
+			pe.l.Label("DLLFunc." + dll + "." + function + ".Ptr")
 			pe.pitRVA("DLLFunc." + dll + "." + function + ".Name", pe.numPut)
 		}
-		pe.Write(Zeros(pe.cpu)) // 结尾
+		pe.f.Write(Zeros(pe.cpu)) // 结尾
 
 		i := 0
 		for function, _ := range funcs {
-			pe.fwm.Label("DLLFunc."+ dll +"." + function + ".Name")
-			pe.Write(Num16L(i))
-			pe.Write(Chars(function))
+			pe.l.Label("DLLFunc."+ dll +"." + function + ".Name")
+			pe.f.Write(Num16L(i))
+			pe.f.Write(Chars(function))
 			i++
 		}
 	}
