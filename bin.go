@@ -1,7 +1,6 @@
 package ass
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 )
@@ -157,6 +156,6 @@ func Chars64(text string) (bin []byte) {
 	return
 }
 
-func Zeros(size int) []byte {
-	return bytes.Repeat([]byte{0}, size)
+func Zeros(size int64) []byte {
+	return make([]byte, size, size)
 }
