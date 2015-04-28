@@ -18,7 +18,7 @@ type pit struct{
 	start string
 	end string
 	added int64
-	numPut NumPut
+	nbo NumBitOrder
 }
 
 func newLabeler(file *os.File) *labeler {
@@ -35,38 +35,38 @@ func (laber *labeler) Label(l string) {
 	laber.labs[l] = fSize(laber.f)
 }
 
-func (laber *labeler) PitOffset(startLabel string, endLabel string, added int64, numPut NumPut) {
+func (laber *labeler) PitOffset(startLabel string, endLabel string, added int64, nbo NumBitOrder) {
 	laber.pits = append(laber.pits, pit{
 		addr: fSize(laber.f),
 		start: startLabel,
 		end: endLabel,
 		added: added,
-		numPut: numPut,
+		nbo: nbo,
 	})
-	switch fmt.Sprint(numPut) {
-		case fmt.Sprint(Num8):
+	switch fmt.Sprint(nbo) {
+		case nboNum8:
 			laber.f.Write(Zeros(1))
-		case fmt.Sprint(Num16L):
+		case nboNum16L:
 			laber.f.Write(Zeros(2))
-		case fmt.Sprint(Num32L):
+		case nboNum32L:
 			laber.f.Write(Zeros(4))
-		case fmt.Sprint(Num64L):
+		case nboNum64L:
 			laber.f.Write(Zeros(8))
-		case fmt.Sprint(Num16B):
+		case nboNum16B:
 			laber.f.Write(Zeros(2))
-		case fmt.Sprint(Num32B):
+		case nboNum32B:
 			laber.f.Write(Zeros(4))
-		case fmt.Sprint(Num64B):
+		case nboNum64B:
 			laber.f.Write(Zeros(8))
 	}
 }
 
-func (laber *labeler) PitPointer(label string, numPut NumPut) {
-	laber.PitOffset("", label, 0, numPut)
+func (laber *labeler) PitPointer(label string, nbo NumBitOrder) {
+	laber.PitOffset("", label, 0, nbo)
 }
 
-func (laber *labeler) PitRelative(label string, numPut NumPut) {
-	laber.PitOffset(label, "", 0, numPut)
+func (laber *labeler) PitRelative(label string, nbo NumBitOrder) {
+	laber.PitOffset(label, "", 0, nbo)
 }
 
 func (laber *labeler) Close() error {
@@ -93,7 +93,7 @@ func (laber *labeler) Close() error {
 		}
 
 		n := end - start + laber.pits[i].added
-		laber.f.WriteAt(laber.pits[i].numPut(n), laber.pits[i].addr)
+		laber.f.WriteAt(laber.pits[i].nbo(n), laber.pits[i].addr)
 	}
 	return nil
 }

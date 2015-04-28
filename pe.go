@@ -3,17 +3,19 @@ package ass
 import (
 	"time"
 	"os"
+	"strconv"
 )
 
 type PE struct{
 	f *os.File
 	l *labeler
 	QpcodeWriter
-	imps map[string]map[string]bool
+	imps map[string]map[string]func(NumBitOrder)
+	datas map[uint64][]byte
 	imgBase int64
 	cui bool
 	cpu int
-	numPut NumPut
+	nbo NumBitOrder
 }
 
 func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, error) {
@@ -24,7 +26,8 @@ func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, err
 	pe := &PE{
 		f: f,
 		l: newLabeler(f),
-		imps: map[string]map[string]bool{},
+		imps: map[string]map[string]func(NumBitOrder){},
+		datas: map[uint64][]byte{},
 		imgBase: imageBase,
 		cui: console,
 		cpu: machine,
@@ -32,15 +35,13 @@ func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, err
 	switch pe.cpu {
 		case I386:
 			pe.QpcodeWriter = &i386QW{
-				w: f,
+				Writer: f,
+				l: newLabeler(f),
 			}
-			pe.numPut = Num32L
+			pe.nbo = Num32L
 		case AMD64:
-			/*
-			pe.MachineCodeWriter = &amd64{
-				m: pe,
-			}*/
-			pe.numPut = Num64L
+
+			pe.nbo = Num64L
 	}
 	pe.writeDOSHeader()
 	pe.writeNTHeader()
@@ -49,19 +50,33 @@ func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, err
 	return pe, nil
 }
 
-func (pe *PE) Close() error {
-	defer pe.f.Close()
+func (pe *PE) Close() (err error) {
 	pe.writeImportDescriptors()
+	pe.writeDatas()
 	pe.sectionEnd()
-	return pe.l.Close()
+
+	err = pe.QpcodeWriter.Close()
+	if err != nil {
+		pe.f.Close()
+		return
+	}
+
+	err = pe.l.Close()
+	if err != nil {
+		pe.f.Close()
+		return
+	}
+
+	err = pe.f.Close()
+	return
 }
 
-func (pe *PE) pitRVA(label string, numPut NumPut) {
-	pe.l.PitOffset("PE.SectionStart", label, pe_RVA_SECTION, numPut)
+func (pe *PE) pitRVA(label string, nbo NumBitOrder) {
+	pe.l.PitOffset("PE.SectionStart", label, pe_RVA_SECTION, nbo)
 }
 
-func (pe *PE) pitVA(label string, numPut NumPut) {
-	pe.l.PitOffset("PE.SectionStart", label, pe.imgBase + pe_RVA_SECTION, numPut)
+func (pe *PE) pitVA(label string, nbo NumBitOrder) {
+	pe.l.PitOffset("PE.SectionStart", label, pe.imgBase + pe_RVA_SECTION, nbo)
 }
 
 func (pe *PE) writeDOSHeader() { // 64字节
@@ -110,7 +125,7 @@ func (pe *PE) writeOptionalHeader() {
 	if pe.cpu == I386 {
 		pe.f.Write(Num32L(pe_RVA_SECTION)) // BaseOfData
 	}
-	pe.f.Write(pe.numPut(pe.imgBase)) // ImageBase
+	pe.f.Write(pe.nbo(pe.imgBase)) // ImageBase
 	pe.f.Write(Num32L(pe_ALIGNMENT_IMAGE)) // SectionAlignment
 	pe.f.Write(Num32L(pe_ALIGNMENT_FILE)) // FileAlignment
 	pe.f.Write(Num16L(5)) // MajorOperatingSystemVersion
@@ -129,10 +144,10 @@ func (pe *PE) writeOptionalHeader() {
 		pe.f.Write(Num16L(pe_IMAGE_SUBSYSTEM_WINDOWS_GUI)) // Subsystem
 	}
 	pe.f.Write(Num16L(0)) // DllCharacteristics
-	pe.f.Write(pe.numPut(65536)) // SizeOfStackReserve
-	pe.f.Write(pe.numPut(4096)) // SizeOfStackCommit
-	pe.f.Write(pe.numPut(65536)) // SizeOfHeapReserve
-	pe.f.Write(pe.numPut(4096)) // SizeOfHeapCommit
+	pe.f.Write(pe.nbo(65536)) // SizeOfStackReserve
+	pe.f.Write(pe.nbo(4096)) // SizeOfStackCommit
+	pe.f.Write(pe.nbo(65536)) // SizeOfHeapReserve
+	pe.f.Write(pe.nbo(4096)) // SizeOfHeapCommit
 	pe.f.Write(Num32L(0)) // LoaderFlags
 	pe.f.Write(Num32L(16)) // NumberOfRvaAndSizes
 
@@ -180,13 +195,15 @@ func (pe *PE) sectionEnd() {
 	pe.l.Label("PE.SectionAlignEnd")
 }
 
-func (pe *PE) DLLFuncPtr(dll string, function string) string {
+func (pe *PE) DLLFuncPtr(dll string, function string) func(NumBitOrder) {
 	_, ok := pe.imps[dll]
 	if !ok {
-		pe.imps[dll] = map[string]bool{}
-		pe.imps[dll][function] = true
+		pe.imps[dll] = map[string]func(NumBitOrder){}
+		pe.imps[dll][function] = func(nbo NumBitOrder){
+			pe.pitVA("DLLFunc." + dll + "." + function + ".Ptr", nbo)
+		}
 	}
-	return "DLLFunc." + dll + "." + function + ".Ptr"
+	return pe.imps[dll][function]
 }
 
 func (pe *PE) writeImportDescriptors() {
@@ -207,7 +224,7 @@ func (pe *PE) writeImportDescriptors() {
 		pe.l.Label("DLL." + dll + ".Thunk")
 		for function, _ := range funcs {
 			pe.l.Label("DLLFunc." + dll + "." + function + ".Ptr")
-			pe.pitRVA("DLLFunc." + dll + "." + function + ".Name", pe.numPut)
+			pe.pitRVA("DLLFunc." + dll + "." + function + ".Name", pe.nbo)
 		}
 		pe.f.Write(Zeros(pe.cpu)) // 结尾
 
@@ -218,6 +235,27 @@ func (pe *PE) writeImportDescriptors() {
 			pe.f.Write(Chars(function))
 			i++
 		}
+	}
+}
+
+func (pe *PE) Data(d []byte) func(NumBitOrder) {
+	var h uint64
+	for i := 0; i < len(d); i++ {
+		h = h * 31 + uint64(d[i])
+	}
+	_, ok := pe.datas[h]
+	if !ok {
+		pe.datas[h] = d
+	}
+	return func(nbo NumBitOrder){
+		pe.pitVA("Data." + strconv.FormatUint(h, 16), nbo)
+	}
+}
+
+func (pe *PE) writeDatas() {
+	for h, d := range pe.datas {
+		pe.l.Label("Data." + strconv.FormatUint(h, 16))
+		pe.f.Write(d)
 	}
 }
 

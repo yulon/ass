@@ -3,9 +3,20 @@ package ass
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 )
 
-type NumPut func(interface{})[]byte
+type NumBitOrder func(interface{})[]byte
+
+var (
+	nboNum8 = fmt.Sprint(Num8)
+	nboNum16L = fmt.Sprint(Num16L)
+	nboNum32L = fmt.Sprint(Num32L)
+	nboNum64L = fmt.Sprint(Num64L)
+	nboNum16B = fmt.Sprint(Num16B)
+	nboNum32B = fmt.Sprint(Num32B)
+	nboNum64B = fmt.Sprint(Num64B)
+)
 
 func Num8(num interface{}) (bin []byte) {
 	switch n := num.(type){
