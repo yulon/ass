@@ -25,6 +25,10 @@ const (
 	ooReg = 3 //11
 )
 
+func (w *i386) Label(l string) {
+	w.l.Label(l)
+}
+
 func (w *i386) Close() error {
 	return w.l.Close()
 }

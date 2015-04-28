@@ -14,11 +14,11 @@ type PE struct{
 	datas map[uint64][]byte
 	imgBase int64
 	cui bool
-	cpu int
+	cpu uint8
 	nbo NumBitOrder
 }
 
-func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, error) {
+func CreatePE(path string, machine uint8, imageBase int64, console bool) (*PE, error) {
 	f, err := os.Create(path)
 	if err != nil {
 		return nil, err
@@ -37,6 +37,7 @@ func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, err
 			pe.insWriter = &i386{
 				Writer: f,
 				l: newLabeler(f),
+				base: pe.imgBase + pe_RVA_SECTION,
 			}
 			pe.nbo = Num32L
 		case AMD64:
@@ -181,7 +182,7 @@ func (pe *PE) writeSectionHeader() error {
 func (pe *PE) sectionStart() {
 	m := fSize(pe.f) % pe_ALIGNMENT_FILE
 	if m > 0 {
-		pe.f.Write(Zeros(int(pe_ALIGNMENT_FILE - m)))
+		pe.f.Write(Zeros(pe_ALIGNMENT_FILE - m))
 	}
 	pe.l.Label("PE.SectionStart")
 }
@@ -190,7 +191,7 @@ func (pe *PE) sectionEnd() {
 	pe.l.Label("PE.SectionEnd")
 	m := fSize(pe.f) % pe_ALIGNMENT_FILE
 	if m > 0 {
-		pe.f.Write(Zeros(int(pe_ALIGNMENT_FILE - m)))
+		pe.f.Write(Zeros(pe_ALIGNMENT_FILE - m))
 	}
 	pe.l.Label("PE.SectionAlignEnd")
 }
@@ -226,7 +227,7 @@ func (pe *PE) writeImportDescriptors() {
 			pe.l.Label("DLLFunc." + dll + "." + function + ".Ptr")
 			pe.pitRVA("DLLFunc." + dll + "." + function + ".Name", pe.nbo)
 		}
-		pe.f.Write(Zeros(pe.cpu)) // 结尾
+		pe.f.Write(Zeros(int64(pe.cpu))) // 结尾
 
 		i := 0
 		for function, _ := range funcs {
