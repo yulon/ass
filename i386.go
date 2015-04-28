@@ -7,7 +7,7 @@ import (
 
 const I386 = 4
 
-type i386QW struct{
+type i386 struct{
 	io.Writer
 	l *labeler
 	base int64
@@ -25,14 +25,14 @@ const (
 	ooReg = 3 //11
 )
 
-func (qw *i386QW) Close() error {
-	return qw.l.Close()
+func (w *i386) Close() error {
+	return w.l.Close()
 }
 
-func (qw *i386QW) switchW(infa interface{}, nbo NumBitOrder) {
+func (w *i386) switchW(infa interface{}, nbo NumBitOrder) {
 	switch v := infa.(type){
 		case int:
-			qw.Write(nbo(v))
+			w.Write(nbo(v))
 		case func(NumBitOrder):
 			v(nbo)
 		default:
@@ -40,32 +40,32 @@ func (qw *i386QW) switchW(infa interface{}, nbo NumBitOrder) {
 	}
 }
 
-func (qw *i386QW) MovRegImm(dst int, src interface{}) {
-	qw.Write(Num8(184 | dst)) //1011wrrr w=1 rrr=dst
-	qw.switchW(src, Num32L)
+func (w *i386) MovRegImm(dst int, src interface{}) {
+	w.Write(Num8(184 | dst)) //1011wrrr w=1 rrr=dst
+	w.switchW(src, Num32L)
 }
 
-func (qw *i386QW) MovRegMem(dst int, src interface{}, byteSrc uint8) {
+func (w *i386) MovRegMem(dst int, src interface{}, byteSrc uint8) {
 	if dst == EAX {
-		qw.Write(Num8(161))
+		w.Write(Num8(161))
 	}else{
-		qw.Write(Num16B(35613 | dst << 3)) //1000101woorrrmmm w=1 oo=00 rrr=dst mmm=101
+		w.Write(Num16B(35613 | dst << 3)) //1000101woorrrmmm w=1 oo=00 rrr=dst mmm=101
 	}
-	qw.switchW(src, Num32L)
+	w.switchW(src, Num32L)
 }
 
-func (qw *i386QW) MovRegReg(dst int, src int) {
-	qw.Write(Num16B(35776 | ooReg << 6 | dst << 3 | src)) //1000101woorrrmmm w=1 oo=ooReg rrr=dst mmm=src
+func (w *i386) MovRegReg(dst int, src int) {
+	w.Write(Num16B(35776 | ooReg << 6 | dst << 3 | src)) //1000101woorrrmmm w=1 oo=ooReg rrr=dst mmm=src
 }
 
-func (qw *i386QW) PushReg(src int) {
-	qw.Write(Num8(80 | src))
+func (w *i386) PushReg(src int) {
+	w.Write(Num8(80 | src))
 }
 
-func (qw *i386QW) Pop(dst int) {
-	qw.Write(Num8(88 | dst))
+func (w *i386) Pop(dst int) {
+	w.Write(Num8(88 | dst))
 }
 
-func (qw *i386QW) CallReg(dst int) {
-	qw.Write(Num16B(65488 | ooReg << 6 | dst)) //11111111oo010mmm oo=ooReg mmm=dst
+func (w *i386) CallReg(dst int) {
+	w.Write(Num16B(65488 | ooReg << 6 | dst)) //11111111oo010mmm oo=ooReg mmm=dst
 }

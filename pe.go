@@ -9,7 +9,7 @@ import (
 type PE struct{
 	f *os.File
 	l *labeler
-	QpcodeWriter
+	insWriter
 	imps map[string]map[string]func(NumBitOrder)
 	datas map[uint64][]byte
 	imgBase int64
@@ -34,7 +34,7 @@ func CreatePE(path string, machine int, imageBase int64, console bool) (*PE, err
 	}
 	switch pe.cpu {
 		case I386:
-			pe.QpcodeWriter = &i386QW{
+			pe.insWriter = &i386{
 				Writer: f,
 				l: newLabeler(f),
 			}
@@ -55,7 +55,7 @@ func (pe *PE) Close() (err error) {
 	pe.writeDatas()
 	pe.sectionEnd()
 
-	err = pe.QpcodeWriter.Close()
+	err = pe.insWriter.Close()
 	if err != nil {
 		pe.f.Close()
 		return

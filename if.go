@@ -4,7 +4,7 @@ import (
 	"io"
 )
 
-type QpcodeWriter interface{
+type insWriter interface{
 	io.WriteCloser
 	MovRegImm(int, interface{})
 	MovRegMem(int, interface{}, uint8)
