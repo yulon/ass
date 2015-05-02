@@ -11,3 +11,10 @@ func fSize(f *os.File) int64 {
 	}
 	return fi.Size()
 }
+
+func fAlign(f *os.File, size int64) {
+	m := fSize(pe.f) % size
+	if m > 0 {
+		pe.f.Write(Zeros(size - m))
+	}
+}

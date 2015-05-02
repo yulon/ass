@@ -180,19 +180,13 @@ func (pe *PE) writeSectionHeader() error {
 }
 
 func (pe *PE) sectionStart() {
-	m := fSize(pe.f) % pe_ALIGNMENT_FILE
-	if m > 0 {
-		pe.f.Write(Zeros(pe_ALIGNMENT_FILE - m))
-	}
+	fAlign(pe.f, pe_ALIGNMENT_FILE)
 	pe.l.Label("PE.SectionStart")
 }
 
 func (pe *PE) sectionEnd() {
 	pe.l.Label("PE.SectionEnd")
-	m := fSize(pe.f) % pe_ALIGNMENT_FILE
-	if m > 0 {
-		pe.f.Write(Zeros(pe_ALIGNMENT_FILE - m))
-	}
+	fAlign(pe.f, pe_ALIGNMENT_FILE)
 	pe.l.Label("PE.SectionAlignEnd")
 }
 
