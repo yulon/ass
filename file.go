@@ -13,8 +13,8 @@ func fSize(f *os.File) int64 {
 }
 
 func fAlign(f *os.File, size int64) {
-	m := fSize(pe.f) % size
+	m := fSize(f) % size
 	if m > 0 {
-		pe.f.Write(Zeros(size - m))
+		f.Write(Zeros(size - m))
 	}
 }
