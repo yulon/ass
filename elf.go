@@ -72,11 +72,11 @@ func (elf *ELF) writeELFHeader() {
 func (elf *ELF) writeProgramHeaderTable() {
 	elf.l.Label("ELF.ProgramHeaderTable")
 	elf.f.Write(Num32L(pt_LOAD)) // p_type
-	elf.f.Write(Num32L(0)) // p_offset
+	elf.l.PitPointer("ELF.SegmentStart", Num32L) // p_offset
 	elf.f.Write(Num32L(0)) // p_vaddr
 	elf.f.Write(Num32L(0)) // p_paddr
-	elf.f.Write(Num32L(0)) // p_filesz
-	elf.f.Write(Num32L(0)) // p_memsz
+	elf.l.PitOffset("ELF.SegmentStart", "ELF.SegmentEnd", 0, Num32L) // p_filesz
+	elf.l.PitOffset("ELF.SegmentStart", "ELF.SegmentAlignEnd", 0, Num32L) // p_memsz
 	elf.f.Write(Num32L(pf_X + pf_R)) // p_flags
 	elf.f.Write(Num32L(0)) // p_align
 	elf.l.Label("ELF.ProgramHeaderTableEnd")
