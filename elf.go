@@ -18,6 +18,9 @@ const (
 	elfCLASS64 = 2 // 64-bit objects
 	ev_CURRENT = 1
 	elfDATA2LSB = 1
+	pt_LOAD = 1
+	pf_X = 1 // exec
+	pf_R = 4 // read
 )
 
 type ELF struct{
@@ -58,19 +61,29 @@ func (elf *ELF) writeELFHeader() {
 	elf.l.PitPointer("ELF.SectionHeaderTable", Num32L) // e_shoff
 	elf.f.Write(Num32L(0)) // e_flags
 	elf.l.PitPointer("ELF.HeaderEnd", Num16L) // e_ehsize
-	elf.f.Write(Num16L(512)) // e_phentsize
+	elf.l.PitOffset("ELF.ProgramHeaderTable", "ELF.ProgramHeaderTableEnd", 0, Num32L) // e_phentsize
 	elf.f.Write(Num16L(1)) // e_phnum
-	elf.f.Write(Num16L(512)) // e_shentsize
+	elf.l.PitOffset("ELF.SectionHeaderTable", "ELF.SectionHeaderTableEnd", 0, Num32L) // e_shentsize
 	elf.f.Write(Num16L(1)) // e_shnum
 	elf.f.Write(Num16L(shn_UNDEF)) // e_shstrndx
 	elf.l.Label("ELF.HeaderEnd")
 }
 
-/*
 func (elf *ELF) writeProgramHeaderTable() {
 	elf.l.Label("ELF.ProgramHeaderTable")
+	elf.f.Write(Num32L(pt_LOAD)) // p_type
+	elf.f.Write(Num32L(0)) // p_offset
+	elf.f.Write(Num32L(0)) // p_vaddr
+	elf.f.Write(Num32L(0)) // p_paddr
+	elf.f.Write(Num32L(0)) // p_filesz
+	elf.f.Write(Num32L(0)) // p_memsz
+	elf.f.Write(Num32L(pf_X + pf_R)) // p_flags
+	elf.f.Write(Num32L(0)) // p_align
+	elf.l.Label("ELF.ProgramHeaderTableEnd")
 }
 
 func (elf *ELF) writeSectionHeaderTable() {
 	elf.l.Label("ELF.SectionHeaderTable")
-}*/
+
+	elf.l.Label("ELF.SectionHeaderTableEnd")
+}
