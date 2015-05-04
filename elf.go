@@ -81,9 +81,3 @@ func (elf *ELF) writeProgramHeaderTable() {
 	elf.f.Write(Num32L(0)) // p_align
 	elf.l.Label("ELF.ProgramHeaderTableEnd")
 }
-
-func (elf *ELF) writeSectionHeaderTable() {
-	elf.l.Label("ELF.SectionHeaderTable")
-
-	elf.l.Label("ELF.SectionHeaderTableEnd")
-}
