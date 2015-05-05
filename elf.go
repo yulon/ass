@@ -82,10 +82,10 @@ func (elf *ELF) writeProgramHeaderTable() {
 	elf.l.Label("ELF.ProgramHeaderTableEnd")
 }
 
-func (pe *PE) segmentStart() {
-	pe.l.Label("PE.SegmentStart")
+func (elf *ELF) segmentStart() {
+	elf.l.Label("PE.SegmentStart")
 }
 
-func (pe *PE) segmentEnd() {
-	pe.l.Label("PE.SegmentEnd")
+func (elf *ELF) segmentEnd() {
+	elf.l.Label("PE.SegmentEnd")
 }
