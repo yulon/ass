@@ -89,3 +89,7 @@ func (elf *ELF) segmentStart() {
 func (elf *ELF) segmentEnd() {
 	elf.l.Label("PE.SegmentEnd")
 }
+
+func (elf *ELF) pitVA(label string, nbo NumBitOrder) {
+	elf.l.PitOffset("PE.SegmentStart", label, 0x8000, nbo)
+}
