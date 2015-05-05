@@ -56,28 +56,36 @@ func (elf *ELF) writeELFHeader() {
 	elf.f.Write(Num16L(et_EXEC)) // e_type
 	elf.f.Write(Num16L(em_386)) // e_machine
 	elf.f.Write(Num32L(0)) // e_version
-	elf.f.Write(Num32L(0)) // e_entry
-	elf.l.PitPointer("ELF.ProgramHeaderTable", Num32L) // e_phoff
-	elf.l.PitPointer("ELF.SectionHeaderTable", Num32L) // e_shoff
+	elf.l.PitPointer("ELF.SegmentStart", Num32L) // e_entry
+	elf.l.PitPointer("ELF.ProgramHeaderTableStart", Num32L) // e_phoff
+	elf.f.Write(Num32L(0)) // e_shoff
 	elf.f.Write(Num32L(0)) // e_flags
 	elf.l.PitPointer("ELF.HeaderEnd", Num16L) // e_ehsize
-	elf.l.PitOffset("ELF.ProgramHeaderTable", "ELF.ProgramHeaderTableEnd", 0, Num32L) // e_phentsize
+	elf.l.PitOffset("ELF.ProgramHeaderTableStart", "ELF.ProgramHeaderTableEnd", 0, Num16L) // e_phentsize
 	elf.f.Write(Num16L(1)) // e_phnum
-	elf.l.PitOffset("ELF.SectionHeaderTable", "ELF.SectionHeaderTableEnd", 0, Num32L) // e_shentsize
-	elf.f.Write(Num16L(1)) // e_shnum
+	elf.f.Write(Num16L(0)) // e_shentsize
+	elf.f.Write(Num16L(0)) // e_shnum
 	elf.f.Write(Num16L(shn_UNDEF)) // e_shstrndx
 	elf.l.Label("ELF.HeaderEnd")
 }
 
 func (elf *ELF) writeProgramHeaderTable() {
-	elf.l.Label("ELF.ProgramHeaderTable")
+	elf.l.Label("ELF.ProgramHeaderTableStart")
 	elf.f.Write(Num32L(pt_LOAD)) // p_type
 	elf.l.PitPointer("ELF.SegmentStart", Num32L) // p_offset
-	elf.f.Write(Num32L(0)) // p_vaddr
-	elf.f.Write(Num32L(0)) // p_paddr
+	elf.f.Write(Num32L(0x8000)) // p_vaddr
+	elf.f.Write(Num32L(0x8000)) // p_paddr
 	elf.l.PitOffset("ELF.SegmentStart", "ELF.SegmentEnd", 0, Num32L) // p_filesz
-	elf.l.PitOffset("ELF.SegmentStart", "ELF.SegmentAlignEnd", 0, Num32L) // p_memsz
+	elf.l.PitOffset("ELF.SegmentStart", "ELF.SegmentEnd", 0, Num32L) // p_memsz
 	elf.f.Write(Num32L(pf_X + pf_R)) // p_flags
 	elf.f.Write(Num32L(0)) // p_align
 	elf.l.Label("ELF.ProgramHeaderTableEnd")
+}
+
+func (pe *PE) segmentStart() {
+	pe.l.Label("PE.SegmentStart")
+}
+
+func (pe *PE) segmentEnd() {
+	pe.l.Label("PE.SegmentEnd")
 }
