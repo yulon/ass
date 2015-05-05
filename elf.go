@@ -62,7 +62,7 @@ func (elf *ELF) writeELFHeader() {
 	elf.f.Write(Num32L(0)) // e_flags
 	elf.l.PitPointer("ELF.HeaderEnd", Num16L) // e_ehsize
 	elf.l.PitOffset("ELF.ProgramHeaderTableStart", "ELF.ProgramHeaderTableEnd", 0, Num16L) // e_phentsize
-	elf.f.Write(Num16L(1)) // e_phnum
+	elf.f.Write(Num16L(2)) // e_phnum
 	elf.f.Write(Num16L(0)) // e_shentsize
 	elf.f.Write(Num16L(0)) // e_shnum
 	elf.f.Write(Num16L(shn_UNDEF)) // e_shstrndx
@@ -71,14 +71,25 @@ func (elf *ELF) writeELFHeader() {
 
 func (elf *ELF) writeProgramHeaderTable() {
 	elf.l.Label("ELF.ProgramHeaderTableStart")
+
 	elf.f.Write(Num32L(pt_LOAD)) // p_type
 	elf.l.PitPointer("ELF.SegmentStart", Num32L) // p_offset
-	elf.f.Write(Num32L(0x8000)) // p_vaddr
-	elf.f.Write(Num32L(0x8000)) // p_paddr
+	elf.f.Write(Num32L(0x8050000)) // p_vaddr
+	elf.f.Write(Num32L(0)) // p_paddr
+	elf.l.PitOffset("", "ELF.SegmentStart", 0, Num32L) // p_filesz
+	elf.f.Write(Num32L(0x10000)) // p_memsz
+	elf.f.Write(Num32L(pf_X + pf_R)) // p_flags
+	elf.f.Write(Num32L(0x10000)) // p_align
+
+	elf.f.Write(Num32L(pt_LOAD)) // p_type
+	elf.l.PitPointer("ELF.SegmentStart", Num32L) // p_offset
+	elf.f.Write(Num32L(0x8060000)) // p_vaddr
+	elf.f.Write(Num32L(0)) // p_paddr
 	elf.l.PitOffset("ELF.SegmentStart", "ELF.SegmentEnd", 0, Num32L) // p_filesz
 	elf.l.PitOffset("ELF.SegmentStart", "ELF.SegmentEnd", 0, Num32L) // p_memsz
 	elf.f.Write(Num32L(pf_X + pf_R)) // p_flags
-	elf.f.Write(Num32L(0)) // p_align
+	elf.f.Write(Num32L(0x10000)) // p_align
+
 	elf.l.Label("ELF.ProgramHeaderTableEnd")
 }
 
@@ -91,5 +102,5 @@ func (elf *ELF) segmentEnd() {
 }
 
 func (elf *ELF) pitVA(label string, nbo NumBitOrder) {
-	elf.l.PitOffset("PE.SegmentStart", label, 0x8000, nbo)
+	elf.l.PitOffset("PE.SegmentStart", label, 0x8060000, nbo)
 }
