@@ -9,7 +9,7 @@ import (
 func TestPE32(*testing.T) {
 	exe, _ := CreatePE("test32.exe", I386, PE_IMAGEBASE_GENERAL, true)
 
-	exe.MovRegImm(EAX, exe.Data(Chars("Hello, World!\r\n")))
+	exe.MovRegImm(EAX, exe.Data(Cstr("Hello, World!\r\n")))
 	exe.PushReg(EAX)
 
 	exe.MovRegMem(EAX, exe.DLLFuncPtr("msvcrt.dll", "printf"), 4)
@@ -25,7 +25,7 @@ func TestPE64(*testing.T) {
 	exe, _ := CreatePE("test64.exe", AMD64, PE_IMAGEBASE_GENERAL, true)
 
 	exe.f.Write([]byte{72, 184})
-	exe.Data(Chars("Hello, World!\r\n"))(Num64L)
+	exe.Data(Cstr("Hello, World!\r\n"))(Num64L)
 	exe.f.Write([]byte{72, 137, 193})
 
 	exe.f.Write([]byte{72, 184})
