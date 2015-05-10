@@ -1,24 +1,24 @@
-package ass
+package bin
 
 import (
 	"encoding/binary"
 	"fmt"
 )
 
-type NumBitOrder func(interface{}) []byte
+type IntntConverter func(interface{}) []byte
 
 var (
-	nboNum8   = fmt.Sprint(Num8)
-	nboNum16L = fmt.Sprint(Num16L)
-	nboNum32L = fmt.Sprint(Num32L)
-	nboNum64L = fmt.Sprint(Num64L)
-	nboNum16B = fmt.Sprint(Num16B)
-	nboNum32B = fmt.Sprint(Num32B)
-	nboNum64B = fmt.Sprint(Num64B)
+	icInt8   = fmt.Sprint(Int8)
+	icInt16L = fmt.Sprint(Int16L)
+	icInt32L = fmt.Sprint(Int32L)
+	icInt64L = fmt.Sprint(Int64L)
+	icInt16B = fmt.Sprint(Int16B)
+	icInt32B = fmt.Sprint(Int32B)
+	icInt64B = fmt.Sprint(Int64B)
 )
 
-func Num8(num interface{}) (bin []byte) {
-	switch n := num.(type) {
+func Int8(i interface{}) (bin []byte) {
+	switch n := i.(type) {
 	case int:
 		bin = []byte{uint8(n)}
 	case int8:
@@ -41,9 +41,9 @@ func Num8(num interface{}) (bin []byte) {
 	return
 }
 
-func num16(num interface{}, bo binary.ByteOrder) []byte {
+func i16(i interface{}, bo binary.ByteOrder) []byte {
 	bin := make([]byte, 8, 8)
-	switch n := num.(type) {
+	switch n := i.(type) {
 	case int:
 		bo.PutUint16(bin, uint16(n))
 	case int8:
@@ -66,9 +66,9 @@ func num16(num interface{}, bo binary.ByteOrder) []byte {
 	return bin[:2]
 }
 
-func num32(num interface{}, bo binary.ByteOrder) []byte {
+func i32(i interface{}, bo binary.ByteOrder) []byte {
 	bin := make([]byte, 8, 8)
-	switch n := num.(type) {
+	switch n := i.(type) {
 	case int:
 		bo.PutUint32(bin, uint32(n))
 	case int8:
@@ -91,9 +91,9 @@ func num32(num interface{}, bo binary.ByteOrder) []byte {
 	return bin[:4]
 }
 
-func num64(num interface{}, bo binary.ByteOrder) []byte {
+func i64(i interface{}, bo binary.ByteOrder) []byte {
 	bin := make([]byte, 8, 8)
-	switch n := num.(type) {
+	switch n := i.(type) {
 	case int:
 		bo.PutUint64(bin, uint64(n))
 	case int8:
@@ -116,46 +116,26 @@ func num64(num interface{}, bo binary.ByteOrder) []byte {
 	return bin
 }
 
-func Num16L(num interface{}) []byte {
-	return num16(num, binary.LittleEndian)
+func Int16L(i interface{}) []byte {
+	return i16(i, binary.LittleEndian)
 }
 
-func Num32L(num interface{}) []byte {
-	return num32(num, binary.LittleEndian)
+func Int32L(i interface{}) []byte {
+	return i32(i, binary.LittleEndian)
 }
 
-func Num64L(num interface{}) []byte {
-	return num64(num, binary.LittleEndian)
+func Int64L(i interface{}) []byte {
+	return i64(i, binary.LittleEndian)
 }
 
-func Num16B(num interface{}) []byte {
-	return num16(num, binary.BigEndian)
+func Int16B(i interface{}) []byte {
+	return i16(i, binary.BigEndian)
 }
 
-func Num32B(num interface{}) []byte {
-	return num32(num, binary.BigEndian)
+func Int32B(i interface{}) []byte {
+	return i32(i, binary.BigEndian)
 }
 
-func Num64B(num interface{}) []byte {
-	return num64(num, binary.BigEndian)
-}
-
-func Cstr(text string) []byte {
-	return append([]byte(text), 0)
-}
-
-func Cstr32(text string) (bin []byte) {
-	bin = make([]byte, 4, 4)
-	copy(bin, []byte(text))
-	return
-}
-
-func Cstr64(text string) (bin []byte) {
-	bin = make([]byte, 8, 8)
-	copy(bin, []byte(text))
-	return
-}
-
-func Zeros(size int64) []byte {
-	return make([]byte, size, size)
+func Int64B(i interface{}) []byte {
+	return i64(i, binary.BigEndian)
 }
