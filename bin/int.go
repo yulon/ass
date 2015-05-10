@@ -5,17 +5,11 @@ import (
 	"fmt"
 )
 
-type IntntConverter func(interface{}) []byte
+type IntConv func(interface{}) []byte
 
-var (
-	icInt8   = fmt.Sprint(Int8)
-	icInt16L = fmt.Sprint(Int16L)
-	icInt32L = fmt.Sprint(Int32L)
-	icInt64L = fmt.Sprint(Int64L)
-	icInt16B = fmt.Sprint(Int16B)
-	icInt32B = fmt.Sprint(Int32B)
-	icInt64B = fmt.Sprint(Int64B)
-)
+func SameIntConv(one IntConv, two IntConv) bool {
+	return fmt.Sprint(one) == fmt.Sprint(two)
+}
 
 func Int8(i interface{}) (bin []byte) {
 	switch n := i.(type) {
