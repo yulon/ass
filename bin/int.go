@@ -2,14 +2,9 @@ package bin
 
 import (
 	"encoding/binary"
-	"fmt"
 )
 
 type IntConv func(interface{}) []byte
-
-func SameIntConv(one IntConv, two IntConv) bool {
-	return fmt.Sprint(one) == fmt.Sprint(two)
-}
 
 func Int8(i interface{}) (bin []byte) {
 	switch n := i.(type) {
