@@ -1,4 +1,4 @@
-package bin
+package binconv
 
 func Cstr(text string) []byte {
 	return append([]byte(text), 0)
