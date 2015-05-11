@@ -1,9 +1,9 @@
-package labeler
+package octrl
 
 import (
 	"io"
 	"errors"
-	"github.com/yulon/ass/bin"
+	"github.com/yulon/go-ass/bin"
 )
 
 type Labeler struct{
@@ -21,7 +21,7 @@ type pit struct{
 	ic bin.IntConv
 }
 
-func New(ws io.WriteSeeker) *Labeler {
+func NewLabeler(ws io.WriteSeeker) *Labeler {
 	offset, err := ws.Seek(0, 1)
 	if err != nil {
 		return nil
