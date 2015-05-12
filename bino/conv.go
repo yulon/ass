@@ -1,4 +1,4 @@
-package binconv
+package bino
 
 import (
 	"encoding/binary"

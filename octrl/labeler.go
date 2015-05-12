@@ -3,7 +3,7 @@ package octrl
 import (
 	"io"
 	"errors"
-	"github.com/yulon/go-ass/binconv"
+	"github.com/yulon/go-ass/bino"
 )
 
 type Labeler struct{
@@ -18,7 +18,7 @@ type pit struct{
 	start string
 	end string
 	added int64
-	ic binconv.Converter
+	ic bino.Converter
 }
 
 func NewLabeler(ws io.WriteSeeker) *Labeler {
@@ -46,7 +46,7 @@ func (laber *Labeler) Label(l string) error {
 	return nil
 }
 
-func (laber *Labeler) Pit(startLabel string, endLabel string, added int64, ic binconv.Converter) (int, error) {
+func (laber *Labeler) Pit(startLabel string, endLabel string, added int64, ic bino.Converter) (int, error) {
 	addr, err := laber.ws.Seek(0, 1)
 	if err != nil {
 		return 0, err
