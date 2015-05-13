@@ -3,14 +3,22 @@ package ass
 import (
 	"io"
 	"fmt"
+	"github.com/yulon/go-octrl"
+	"github.com/yulon/go-bin"
 )
 
-const I386 = 4
+type I386Writer struct{
+	b *bin.Writer
+	l *octrl.Labeler
+	bva int64
+}
 
-type i386 struct{
-	io.Writer
-	l *labeler
-	base int64
+func NewI386Writer(ws io.WriteSeeker, BaseVA int64) *I386Writer {
+	return &I386Writer{
+		b: bin.NewWriter(ws),
+		l: octrl.NewLabeler(ws),
+		bva: BaseVA,
+	}
 }
 
 const (
@@ -25,51 +33,51 @@ const (
 	ooReg = 3 //11
 )
 
-func (w *i386) Label(l string) {
+func (w *I386Writer) Label(l string) {
 	w.l.Label(l)
 }
 
-func (w *i386) Close() error {
+func (w *I386Writer) Close() error {
 	return w.l.Close()
 }
 
-func (w *i386) switchW(infa interface{}, nbo NumBitOrder) {
+func (w *I386Writer) switchW(infa interface{}, conv bin.Converter) {
 	switch v := infa.(type){
 		case int:
-			w.Write(nbo(v))
-		case func(NumBitOrder):
-			v(nbo)
+			w.b.Write(conv(v))
+		case func(bin.Converter):
+			v(conv)
 		default:
 			fmt.Println("Error: ", infa)
 	}
 }
 
-func (w *i386) MovRegImm(dst int, src interface{}) {
-	w.Write(Num8(184 | dst)) //1011wrrr w=1 rrr=dst
-	w.switchW(src, Num32L)
+func (w *I386Writer) MovRegImm(dst int, src interface{}) {
+	w.b.Byte(184 | dst) //1011wrrr w=1 rrr=dst
+	w.switchW(src, bin.Dword)
 }
 
-func (w *i386) MovRegMem(dst int, src interface{}, byteSrc uint8) {
+func (w *I386Writer) MovRegMem(dst int, src interface{}, byteSrc uint8) {
 	if dst == EAX {
-		w.Write(Num8(161))
+		w.b.Byte(161)
 	}else{
-		w.Write(Num16B(35613 | dst << 3)) //1000101woorrrmmm w=1 oo=00 rrr=dst mmm=101
+		w.b.WordB(35613 | dst << 3) //1000101woorrrmmm w=1 oo=00 rrr=dst mmm=101
 	}
-	w.switchW(src, Num32L)
+	w.switchW(src, bin.Dword)
 }
 
-func (w *i386) MovRegReg(dst int, src int) {
-	w.Write(Num16B(35776 | ooReg << 6 | dst << 3 | src)) //1000101woorrrmmm w=1 oo=ooReg rrr=dst mmm=src
+func (w *I386Writer) MovRegReg(dst int, src int) {
+	w.b.WordB(35776 | ooReg << 6 | dst << 3 | src) //1000101woorrrmmm w=1 oo=ooReg rrr=dst mmm=src
 }
 
-func (w *i386) PushReg(src int) {
-	w.Write(Num8(80 | src))
+func (w *I386Writer) PushReg(src int) {
+	w.b.Byte(80 | src)
 }
 
-func (w *i386) Pop(dst int) {
-	w.Write(Num8(88 | dst))
+func (w *I386Writer) Pop(dst int) {
+	w.b.Byte(88 | dst)
 }
 
-func (w *i386) CallReg(dst int) {
-	w.Write(Num16B(65488 | ooReg << 6 | dst)) //11111111oo010mmm oo=ooReg mmm=dst
+func (w *I386Writer) CallReg(dst int) {
+	w.b.WordB(65488 | ooReg << 6 | dst) //11111111oo010mmm oo=ooReg mmm=dst
 }
