@@ -6,8 +6,8 @@ import (
 
 type Converter func(interface{}) []byte
 
-func Byte(i interface{}) (bin []byte) {
-	switch n := i.(type) {
+func Byte(data interface{}) (bin []byte) {
+	switch n := data.(type) {
 		case int:
 			bin = []byte{uint8(n)}
 		case int8:
@@ -30,9 +30,9 @@ func Byte(i interface{}) (bin []byte) {
 	return
 }
 
-func word(i interface{}, order binary.ByteOrder) []byte {
+func word(data interface{}, order binary.ByteOrder) []byte {
 	bin := make([]byte, 8, 8)
-	switch n := i.(type) {
+	switch n := data.(type) {
 		case int:
 			order.PutUint16(bin, uint16(n))
 		case int8:
@@ -63,9 +63,9 @@ func word(i interface{}, order binary.ByteOrder) []byte {
 	return bin[:2]
 }
 
-func dword(i interface{}, order binary.ByteOrder) []byte {
+func dword(data interface{}, order binary.ByteOrder) []byte {
 	bin := make([]byte, 8, 8)
-	switch n := i.(type) {
+	switch n := data.(type) {
 		case int:
 			order.PutUint32(bin, uint32(n))
 		case int8:
@@ -96,9 +96,9 @@ func dword(i interface{}, order binary.ByteOrder) []byte {
 	return bin[:4]
 }
 
-func qword(i interface{}, order binary.ByteOrder) []byte {
+func qword(data interface{}, order binary.ByteOrder) []byte {
 	bin := make([]byte, 8, 8)
-	switch n := i.(type) {
+	switch n := data.(type) {
 		case int:
 			order.PutUint64(bin, uint64(n))
 		case int8:
@@ -129,26 +129,26 @@ func qword(i interface{}, order binary.ByteOrder) []byte {
 	return bin
 }
 
-func Word(i interface{}) []byte {
-	return word(i, binary.LittleEndian)
+func Word(data interface{}) []byte {
+	return word(data, binary.LittleEndian)
 }
 
-func Dword(i interface{}) []byte {
-	return dword(i, binary.LittleEndian)
+func Dword(data interface{}) []byte {
+	return dword(data, binary.LittleEndian)
 }
 
-func Qword(i interface{}) []byte {
-	return qword(i, binary.LittleEndian)
+func Qword(data interface{}) []byte {
+	return qword(data, binary.LittleEndian)
 }
 
-func WordB(i interface{}) []byte {
-	return word(i, binary.BigEndian)
+func WordB(data interface{}) []byte {
+	return word(data, binary.BigEndian)
 }
 
-func DwordB(i interface{}) []byte {
-	return dword(i, binary.BigEndian)
+func DwordB(data interface{}) []byte {
+	return dword(data, binary.BigEndian)
 }
 
-func QwordB(i interface{}) []byte {
-	return qword(i, binary.BigEndian)
+func QwordB(data interface{}) []byte {
+	return qword(data, binary.BigEndian)
 }
