@@ -22,15 +22,15 @@ func NewI386Writer(ws io.WriteSeeker, BaseVA int64) *I386Writer {
 }
 
 const (
-	EAX = 0 //000
-	EBX = 3 //011
-	ECX = 1 //001
-	EDX = 2 //010
-	ESI = 6 //110
-	EDI = 7 //111
-	EBP = 5 //101
-	ESP = 4 //100
-	ooReg = 3 //11
+	EAX = 0 // 000
+	EBX = 3 // 011
+	ECX = 1 // 001
+	EDX = 2 // 010
+	ESI = 6 // 110
+	EDI = 7 // 111
+	EBP = 5 // 101
+	ESP = 4 // 100
+	ooReg = 3 // 11
 )
 
 func (w *I386Writer) Label(l string) {
@@ -53,7 +53,7 @@ func (w *I386Writer) switchW(infa interface{}, conv bin.Converter) {
 }
 
 func (w *I386Writer) MovRegImm(dst int, src interface{}) {
-	w.b.Byte(184 | dst) //1011wrrr w=1 rrr=dst
+	w.b.Byte(184 | dst) // 1011wrrr w=1 rrr=dst
 	w.switchW(src, bin.Dword)
 }
 
@@ -61,13 +61,13 @@ func (w *I386Writer) MovRegMem(dst int, src interface{}, byteSrc uint8) {
 	if dst == EAX {
 		w.b.Byte(161)
 	}else{
-		w.b.WordB(35613 | dst << 3) //1000101woorrrmmm w=1 oo=00 rrr=dst mmm=101
+		w.b.WordB(35613 | dst << 3) // 1000101woorrrmmm w=1 oo=00 rrr=dst mmm=101
 	}
 	w.switchW(src, bin.Dword)
 }
 
 func (w *I386Writer) MovRegReg(dst int, src int) {
-	w.b.WordB(35776 | ooReg << 6 | dst << 3 | src) //1000101woorrrmmm w=1 oo=ooReg rrr=dst mmm=src
+	w.b.WordB(35776 | ooReg << 6 | dst << 3 | src) // 1000101woorrrmmm w=1 oo=ooReg rrr=dst mmm=src
 }
 
 func (w *I386Writer) PushReg(src int) {
@@ -79,5 +79,9 @@ func (w *I386Writer) Pop(dst int) {
 }
 
 func (w *I386Writer) CallReg(dst int) {
-	w.b.WordB(65488 | ooReg << 6 | dst) //11111111oo010mmm oo=ooReg mmm=dst
+	w.b.WordB(65488 | ooReg << 6 | dst) // 11111111oo010mmm oo=ooReg mmm=dst
+}
+
+func (w *I386Writer) Lock() { // ADD, ADC, AND, BTC, BTR, BTS, CMPXCHG, CMPXCH8B, DEC, INC, NEG, NOT, OR, SBB, SUB, XOR, XADD, XCHG
+	w.b.Byte(240)
 }
