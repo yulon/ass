@@ -8,6 +8,7 @@ import (
 )
 
 type I386 struct{
+	io.Writer
 	b *bin.Writer
 	l *octrl.Labeler
 	bva int64
@@ -15,6 +16,7 @@ type I386 struct{
 
 func NewI386(ws io.WriteSeeker, BaseVA int64) *I386 {
 	return &I386{
+		Writer: ws,
 		b: bin.NewWriter(ws),
 		l: octrl.NewLabeler(ws),
 		bva: BaseVA,
@@ -44,7 +46,7 @@ func (w *I386) Close() error {
 func (w *I386) switchW(infa interface{}, conv bin.Converter) {
 	switch v := infa.(type){
 		case int:
-			w.b.Write(conv(v))
+			w.Write(conv(v))
 		case func(bin.Converter):
 			v(conv)
 		default:
