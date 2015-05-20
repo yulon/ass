@@ -43,12 +43,12 @@ func (w *I386) Close() error {
 	return w.l.Close()
 }
 
-func (w *I386) switchW(infa interface{}, conv bin.Converter) {
+func (w *I386) switchW(infa interface{}, wc bin.WordConv) {
 	switch v := infa.(type){
 		case int:
-			w.Write(conv(v))
-		case func(bin.Converter):
-			v(conv)
+			w.Write(wc(v))
+		case func(bin.WordConv):
+			v(wc)
 		default:
 			fmt.Println("Error: ", infa)
 	}
