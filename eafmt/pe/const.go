@@ -2,6 +2,7 @@ package pe
 
 const (
 	ImageBaseUtil = 0x00400000
+
 	imageAlignment = 0x00001000
 	fileAlignment = 0x00000200
 
