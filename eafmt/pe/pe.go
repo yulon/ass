@@ -12,15 +12,16 @@ type File struct {
 	*os.File
 	w *bin.Writer
 	l *octrl.Labeler
-	imps map[string]map[string]func(bin.Converter)
+	imps map[string]map[string]func(bin.WordConv)
 	datas map[uint64][]byte
-	imgBase int64
+	iBase int64
+	fBase int64
 	gui bool
-	mach uint8
-	conv bin.Converter
+	mach uint16
+	wc bin.WordConv
 }
 
-func Create(path string, machine uint8, imageBase int64, gui bool) (*File, error) {
+func Create(path string, machine uint16, imageBase int64, gui bool) (*File, error) {
 	f, err := os.Create(path)
 	if err != nil {
 		return nil, err
@@ -29,17 +30,17 @@ func Create(path string, machine uint8, imageBase int64, gui bool) (*File, error
 		File: f,
 		w: bin.NewWriter(f),
 		l: octrl.NewLabeler(f),
-		imps: map[string]map[string]func(bin.Converter){},
+		imps: map[string]map[string]func(bin.WordConv){},
 		datas: map[uint64][]byte{},
-		imgBase: imageBase,
+		iBase: imageBase,
 		gui: gui,
 		mach: machine,
 	}
 	switch pe.mach {
-		case I386:
-			pe.conv = bin.Dword
-		case AMD64:
-			pe.conv = bin.Qword
+		case IMAGE_FILE_MACHINE_I386:
+			pe.wc = bin.Dword
+		case IMAGE_FILE_MACHINE_AMD64:
+			pe.wc = bin.Qword
 	}
 	pe.writeDOSHeader()
 	pe.writeNTHeader()
@@ -63,12 +64,12 @@ func (pe *File) Close() (err error) {
 	return
 }
 
-func (pe *File) pitRVA(label string, conv bin.Converter) {
-	pe.l.Pit("PE.SectionStart", label, RVA_SECTION, conv)
+func (pe *File) pitRVA(label string, wc bin.WordConv) {
+	pe.l.Pit("PE.SectionStart", label, RVA_SECTION, wc)
 }
 
-func (pe *File) pitVA(label string, conv bin.Converter) {
-	pe.l.Pit("PE.SectionStart", label, pe.imgBase+RVA_SECTION, conv)
+func (pe *File) pitVA(label string, wc bin.WordConv) {
+	pe.l.Pit("PE.SectionStart", label, pe.iBase+RVA_SECTION, wc)
 }
 
 func (pe *File) writeDOSHeader() { // 64字节
@@ -85,12 +86,7 @@ func (pe *File) writeNTHeader() { // 248字节
 }
 
 func (pe *File) writeFileHeader() { // 20字节
-	switch pe.mach {
-	case I386:
-		pe.w.Word(IMAGE_FILE_MACHINE_I386) // Machine
-	case AMD64:
-		pe.w.Word(IMAGE_FILE_MACHINE_AMD64) // Machine
-	}
+	pe.w.Word(pe.mach) // Machine
 	pe.w.Word(1) // NumberOfSections
 	pe.w.Dword(time.Now().Unix()) // TimeDateStamp
 	pe.w.Dword(0) // PointerToSymbolTable
@@ -102,9 +98,9 @@ func (pe *File) writeFileHeader() { // 20字节
 func (pe *File) writeOptionalHeader() {
 	pe.l.Label("PE.OptionalHeaderStart")
 	switch pe.mach {
-		case I386:
+		case IMAGE_FILE_MACHINE_I386:
 			pe.w.Word(IMAGE_NT_OPTIONAL_HDR32_MAGIC) // Magic
-		case AMD64:
+		case IMAGE_FILE_MACHINE_AMD64:
 			pe.w.Word(IMAGE_NT_OPTIONAL_HDR64_MAGIC) // Magic
 	}
 	pe.w.Byte(1) // MajorLinkerVersion
@@ -114,10 +110,10 @@ func (pe *File) writeOptionalHeader() {
 	pe.w.Dword(0) // SizeOfUnInitializedData
 	pe.w.Dword(RVA_SECTION) // AddressOfEntryPoint
 	pe.w.Dword(RVA_SECTION) // BaseOfCode
-	if pe.mach == I386 {
+	if pe.mach == IMAGE_FILE_MACHINE_I386 {
 		pe.w.Dword(RVA_SECTION) // BaseOfData
 	}
-	pe.Write(pe.conv(pe.imgBase)) // ImageBase
+	pe.Write(pe.wc(pe.iBase)) // ImageBase
 	pe.w.Dword(ALIGNMENT_IMAGE) // SectionAlignment
 	pe.w.Dword(ALIGNMENT_FILE) // FileAlignment
 	pe.w.Word(5) // MajorOperatingSystemVersion
@@ -136,10 +132,10 @@ func (pe *File) writeOptionalHeader() {
 		pe.w.Word(IMAGE_SUBSYSTEM_WINDOWS_CUI) // Subsystem
 	}
 	pe.w.Word(0) // DllCharacteristics
-	pe.Write(pe.conv(65536)) // SizeOfStackReserve
-	pe.Write(pe.conv(4096)) // SizeOfStackCommit
-	pe.Write(pe.conv(65536)) // SizeOfHeapReserve
-	pe.Write(pe.conv(4096)) // SizeOfHeapCommit
+	pe.Write(pe.wc(65536)) // SizeOfStackReserve
+	pe.Write(pe.wc(4096)) // SizeOfStackCommit
+	pe.Write(pe.wc(65536)) // SizeOfHeapReserve
+	pe.Write(pe.wc(4096)) // SizeOfHeapCommit
 	pe.w.Dword(0) // LoaderFlags
 	pe.w.Dword(16) // NumberOfRvaAndSizes
 
@@ -173,6 +169,7 @@ func (pe *File) writeSectionHeader() error {
 func (pe *File) sectionStart() {
 	octrl.Align(pe, ALIGNMENT_FILE)
 	pe.l.Label("PE.SectionStart")
+	pe.fBase, _ = pe.Seek(0, 1)
 }
 
 func (pe *File) sectionEnd() {
@@ -181,12 +178,17 @@ func (pe *File) sectionEnd() {
 	pe.l.Label("PE.SectionAlignEnd")
 }
 
-func (pe *File) DLLFuncPtr(dll string, function string) func(bin.Converter) {
+func (pe *File) GetVA() int64 {
+	o, _ := pe.Seek(0, 1)
+	return o - pe.fBase + pe.iBase + RVA_SECTION
+}
+
+func (pe *File) DLLFuncPtr(dll string, function string) func(bin.WordConv) {
 	_, ok := pe.imps[dll]
 	if !ok {
-		pe.imps[dll] = map[string]func(bin.Converter){}
-		pe.imps[dll][function] = func(conv bin.Converter) {
-			pe.pitVA("DLLFunc."+dll+"."+function+".Ptr", conv)
+		pe.imps[dll] = map[string]func(bin.WordConv){}
+		pe.imps[dll][function] = func(wc bin.WordConv) {
+			pe.pitVA("DLLFunc."+dll+"."+function+".Ptr", wc)
 		}
 	}
 	return pe.imps[dll][function]
@@ -210,9 +212,9 @@ func (pe *File) writeImportDescriptors() {
 		pe.l.Label("DLL." + dll + ".Thunk")
 		for function, _ := range funcs {
 			pe.l.Label("DLLFunc." + dll + "." + function + ".Ptr")
-			pe.pitRVA("DLLFunc."+dll+"."+function+".Name", pe.conv)
+			pe.pitRVA("DLLFunc."+dll+"."+function+".Name", pe.wc)
 		}
-		pe.w.Zeros(int64(pe.mach)) // 结尾
+		pe.Write(pe.wc(0)) // 结尾
 
 		i := 0
 		for function, _ := range funcs {
@@ -224,7 +226,7 @@ func (pe *File) writeImportDescriptors() {
 	}
 }
 
-func (pe *File) Data(d []byte) func(bin.Converter) {
+func (pe *File) Data(d []byte) func(bin.WordConv) {
 	var h uint64
 	for i := 0; i < len(d); i++ {
 		h = h*31 + uint64(d[i])
@@ -233,8 +235,8 @@ func (pe *File) Data(d []byte) func(bin.Converter) {
 	if !ok {
 		pe.datas[h] = d
 	}
-	return func(conv bin.Converter) {
-		pe.pitVA("Data."+strconv.FormatUint(h, 16), conv)
+	return func(wc bin.WordConv) {
+		pe.pitVA("Data."+strconv.FormatUint(h, 16), wc)
 	}
 }
 
@@ -246,9 +248,6 @@ func (pe *File) writeDatas() {
 }
 
 const (
-	I386 = 4
-	AMD64 = 8
-	IMAGEBASE_GENERAL = 0x00400000
 	RVA_SECTION = 0x00001000
 	ALIGNMENT_IMAGE = 0x00001000
 	ALIGNMENT_FILE = 0x00000200
