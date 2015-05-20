@@ -11,15 +11,13 @@ type I386 struct{
 	io.Writer
 	b *bin.Writer
 	l *octrl.Labeler
-	bva int64
 }
 
-func NewI386(ws io.WriteSeeker, BaseVA int64) *I386 {
+func NewI386(ws io.WriteSeeker) *I386 {
 	return &I386{
 		Writer: ws,
 		b: bin.NewWriter(ws),
 		l: octrl.NewLabeler(ws),
-		bva: BaseVA,
 	}
 }
 
