@@ -10,7 +10,7 @@ import (
 
 func TestPE32(*testing.T) {
 	exe, _ := Create("test32.exe", MachineI386, ImageBaseUtil, false)
-	code := ass.NewI386(exe, exe.GetVA())
+	code := ass.NewI386(exe)
 
 	code.MovRegImm(ass.EAX, exe.Data(bin.Cstr("Hello, World!\r\n")))
 	code.PushReg(ass.EAX)

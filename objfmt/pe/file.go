@@ -167,20 +167,26 @@ func (pe *File) writeSectionHeader() error {
 }
 
 func (pe *File) sectionStart() {
-	octrl.Align(pe, fileAlignment)
+	octrl.Align(pe.File, fileAlignment)
 	pe.l.Label("PE.SectionStart")
-	pe.fBase, _ = pe.Seek(0, 1)
 }
 
 func (pe *File) sectionEnd() {
 	pe.l.Label("PE.SectionEnd")
-	octrl.Align(pe, fileAlignment)
+	octrl.Align(pe.File, fileAlignment)
 	pe.l.Label("PE.SectionAlignEnd")
 }
 
-func (pe *File) GetVA() int64 {
-	o, _ := pe.Seek(0, 1)
-	return o - pe.fBase + pe.iBase + imageAlignment
+func (pe *File) Seek(offset int64, whence int) (int64, error) {
+	fBase, err := pe.l.Get("PE.SectionStart")
+	if err != nil {
+		return 0, err
+	}
+	if whence == 0 {
+		offset = offset - (pe.iBase + imageAlignment) + fBase
+	}
+	newOff, err := pe.File.Seek(offset, whence)
+	return newOff - fBase + pe.iBase + imageAlignment, err
 }
 
 func (pe *File) DLLFuncPtr(dll string, function string) func(bin.WordConv) {
