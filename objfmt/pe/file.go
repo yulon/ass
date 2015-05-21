@@ -15,7 +15,6 @@ type File struct {
 	imps map[string]map[string]func(bin.WordConv)
 	datas map[uint64][]byte
 	iBase int64
-	fBase int64
 	gui bool
 	mach uint16
 	wc bin.WordConv
