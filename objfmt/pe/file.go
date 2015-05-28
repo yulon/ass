@@ -197,7 +197,7 @@ func (pe *File) DLLFuncPtr(dll string, function string) func(bin.WordConv) {
 	if !ok {
 		pe.imps[dll] = map[string]func(bin.WordConv){}
 		pe.imps[dll][function] = func(wc bin.WordConv) {
-			pe.pitVA("DLLFunc."+dll+"."+function+".Ptr", wc)
+			pe.pitVA("DLLFunc." + dll + "." + function + ".Ptr", wc)
 		}
 	}
 	return pe.imps[dll][function]
@@ -206,11 +206,11 @@ func (pe *File) DLLFuncPtr(dll string, function string) func(bin.WordConv) {
 func (pe *File) writeImportDescriptors() {
 	pe.l.Label("PE.ImportDescriptors")
 	for dll, _ := range pe.imps { // 输出 IMAGE_IMPORT_DESCRIPTOR 数组
-		pe.pitRVA("DLL."+dll+".Thunk", bin.Dword) // OriginalFirstThunk
+		pe.pitRVA("DLL." + dll + ".Thunk", bin.Dword) // OriginalFirstThunk
 		pe.w.Dword(0) // TimeDateStamp
 		pe.w.Dword(0) // ForwarderChain
-		pe.pitRVA("DLL."+dll+".Name", bin.Dword) // Name
-		pe.pitRVA("DLL."+dll+".Thunk", bin.Dword) // FirstThunk
+		pe.pitRVA("DLL." + dll + ".Name", bin.Dword) // Name
+		pe.pitRVA("DLL." + dll + ".Thunk", bin.Dword) // FirstThunk
 	}
 	pe.w.Zeros(import_descriptor_size) // 尾 IMAGE_IMPORT_DESCRIPTOR
 
@@ -221,7 +221,7 @@ func (pe *File) writeImportDescriptors() {
 		pe.l.Label("DLL." + dll + ".Thunk")
 		for function, _ := range funcs {
 			pe.l.Label("DLLFunc." + dll + "." + function + ".Ptr")
-			pe.pitRVA("DLLFunc."+dll+"."+function+".Name", pe.wc)
+			pe.pitRVA("DLLFunc." + dll + "." + function + ".Name", pe.wc)
 		}
 		pe.Write(pe.wc(0)) // 结尾
 
@@ -245,7 +245,7 @@ func (pe *File) Data(d []byte) func(bin.WordConv) {
 		pe.datas[h] = d
 	}
 	return func(wc bin.WordConv) {
-		pe.pitVA("Data."+strconv.FormatUint(h, 16), wc)
+		pe.pitVA("Data." + strconv.FormatUint(h, 16), wc)
 	}
 }
 
