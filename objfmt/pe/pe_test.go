@@ -10,6 +10,7 @@ import (
 
 func TestPE32(*testing.T) {
 	exe, _ := Create("test32.exe", MachineI386, ImageBaseUtil, false)
+	exe.Entry()
 	code := ass.NewI386(exe)
 
 	code.MovRegImm(ass.EAX, exe.Data(bin.Cstr("Hello, World!\r\n")))
@@ -27,6 +28,7 @@ func TestPE32(*testing.T) {
 
 func TestPE64(*testing.T) {
 	exe, _ := Create("test64.exe", MachineAMD64, ImageBaseUtil, false)
+	exe.Entry()
 
 	exe.Write([]byte{72, 184})
 	exe.Data(bin.Cstr("Hello, World!\r\n"))(bin.Qword)

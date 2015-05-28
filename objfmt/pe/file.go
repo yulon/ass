@@ -107,7 +107,7 @@ func (pe *File) writeOptionalHeader() {
 	pe.l.Pit("PE.SectionStart", "PE.SectionEnd", 0, bin.Dword) // SizeOfCode
 	pe.w.Dword(0) // SizeOfInitializedData
 	pe.w.Dword(0) // SizeOfUnInitializedData
-	pe.w.Dword(imageAlignment) // AddressOfEntryPoint
+	pe.l.Pit("PE.SectionStart", "PE.Entry", imageAlignment, bin.Dword) // AddressOfEntryPoint
 	pe.w.Dword(imageAlignment) // BaseOfCode
 	if pe.mach == MachineI386 {
 		pe.w.Dword(imageAlignment) // BaseOfData
@@ -186,6 +186,10 @@ func (pe *File) Seek(offset int64, whence int) (int64, error) {
 	}
 	newOff, err := pe.File.Seek(offset, whence)
 	return newOff - fBase + pe.iBase + imageAlignment, err
+}
+
+func (pe *File) Entry() {
+	pe.l.Label("PE.Entry")
 }
 
 func (pe *File) DLLFuncPtr(dll string, function string) func(bin.WordConv) {
