@@ -44,14 +44,14 @@ func Create(path string, machine uint16, imageBase int64, gui bool) (*File, erro
 	pe.writeDOSHeader()
 	pe.writeNTHeader()
 	pe.writeSectionHeader()
-	pe.sectionStart()
+	pe.codataStart()
 	return pe, nil
 }
 
 func (pe *File) Close() (err error) {
 	pe.writeImportDescriptors()
 	pe.writeDatas()
-	pe.sectionEnd()
+	pe.codataEnd()
 
 	err = pe.l.Close()
 	if err != nil {
@@ -64,21 +64,21 @@ func (pe *File) Close() (err error) {
 }
 
 func (pe *File) pitRVA(label string, wc bin.WordConv) {
-	pe.l.Pit("PE.SectionStart", label, imageAlignment, wc)
+	pe.l.Pit("Codata.Start", label, imageAlignment, wc)
 }
 
 func (pe *File) pitVA(label string, wc bin.WordConv) {
-	pe.l.Pit("PE.SectionStart", label, pe.iBase + imageAlignment, wc)
+	pe.l.Pit("Codata.Start", label, pe.iBase + imageAlignment, wc)
 }
 
 func (pe *File) writeDOSHeader() { // 64字节
 	pe.w.String("MZ") // e_magic
 	pe.w.Zeros(58)
-	pe.l.Pit("", "PE.NTHeaders", 0, bin.Dword) // e_lfanew
+	pe.l.Pit("", "NTHeaders", 0, bin.Dword) // e_lfanew
 }
 
 func (pe *File) writeNTHeader() { // 248字节
-	pe.l.Label("PE.NTHeaders")
+	pe.l.Label("NTHeaders")
 	pe.w.Dword("PE")
 	pe.writeFileHeader()
 	pe.writeOptionalHeader()
@@ -90,12 +90,12 @@ func (pe *File) writeFileHeader() { // 20字节
 	pe.w.Dword(time.Now().Unix()) // TimeDateStamp
 	pe.w.Dword(0) // PointerToSymbolTable
 	pe.w.Dword(0) // NumberOfSymbols
-	pe.l.Pit("PE.OptionalHeaderStart", "PE.OptionalHeaderEnd", 0, bin.Word) // SizeOfOptionalHeader
+	pe.l.Pit("OH.Start", "OH.End", 0, bin.Word) // SizeOfOptionalHeader
 	pe.w.Word(image_file_executable_image | image_file_line_nums_stripped | image_file_local_syms_stripped | image_file_large_address_aware | image_file_debug_stripped) // Characteristics
 }
 
 func (pe *File) writeOptionalHeader() {
-	pe.l.Label("PE.OptionalHeaderStart")
+	pe.l.Label("OH.Start")
 	switch pe.mach {
 		case MachineI386:
 			pe.w.Word(image_nt_optional_hdr32_magic) // Magic
@@ -104,7 +104,7 @@ func (pe *File) writeOptionalHeader() {
 	}
 	pe.w.Byte(1) // MajorLinkerVersion
 	pe.w.Byte(0) // MinerLinkerVersion
-	pe.l.Pit("PE.SectionStart", "PE.SectionEnd", 0, bin.Dword) // SizeOfCode
+	pe.l.Pit("Codata.Start", "Codata.End", 0, bin.Dword) // SizeOfCode
 	pe.w.Dword(0) // SizeOfInitializedData
 	pe.w.Dword(0) // SizeOfUnInitializedData
 	pe.pitRVA("Code.Entry", bin.Dword) // AddressOfEntryPoint
@@ -122,8 +122,8 @@ func (pe *File) writeOptionalHeader() {
 	pe.w.Word(5) // MajorSubsystemVersion
 	pe.w.Word(1) // MinorSubsystemVersion
 	pe.w.Dword(0) // Win32VersionValue
-	pe.l.Pit("PE.SectionStart", "PE.SectionAlignEnd", imageAlignment, bin.Dword) // SizeOfImage
-	pe.l.Pit("", "PE.SectionStart", 0, bin.Dword) // SizeOfHeaders
+	pe.l.Pit("Codata.Start", "Codata.AlignEnd", imageAlignment, bin.Dword) // SizeOfImage
+	pe.l.Pit("", "Codata.Start", 0, bin.Dword) // SizeOfHeaders
 	pe.w.Dword(0) // CheckSum
 	if pe.gui {
 		pe.w.Word(image_subsystem_windows_gui) // Subsystem
@@ -141,22 +141,22 @@ func (pe *File) writeOptionalHeader() {
 	for i := 0; i < 16; i++ {
 		 // IMAGE_DATA_DIRECTORY
 		if i == image_directory_entry_import {
-			pe.pitRVA("PE.ImportDescriptors", bin.Dword) // VirtualAddress
+			pe.pitRVA("ImportDescriptors", bin.Dword) // VirtualAddress
 			pe.w.Dword(40) // Size
 		} else {
 			pe.w.Dword(0) // VirtualAddress
 			pe.w.Dword(0) // Size
 		}
 	}
-	pe.l.Label("PE.OptionalHeaderEnd")
+	pe.l.Label("OH.End")
 }
 
 func (pe *File) writeSectionHeader() error {
 	pe.w.Qword(".codata") // Name
-	pe.l.Pit("PE.SectionStart", "PE.SectionEnd", 0, bin.Dword) // VirtualSize
+	pe.l.Pit("Codata.Start", "Codata.End", 0, bin.Dword) // VirtualSize
 	pe.w.Dword(imageAlignment) // VirtualAddress
-	pe.l.Pit("PE.SectionStart", "PE.SectionAlignEnd", 0, bin.Dword) // SizeOfRawData
-	pe.l.Pit("", "PE.SectionStart", 0, bin.Dword) // PointerToRawData
+	pe.l.Pit("Codata.Start", "Codata.AlignEnd", 0, bin.Dword) // SizeOfRawData
+	pe.l.Pit("", "Codata.Start", 0, bin.Dword) // PointerToRawData
 	pe.w.Dword(0) // PointerToRelocations
 	pe.w.Dword(0) // PointerToLinenumbers
 	pe.w.Word(0) // NumberOfRelocations
@@ -165,19 +165,19 @@ func (pe *File) writeSectionHeader() error {
 	return nil
 }
 
-func (pe *File) sectionStart() {
+func (pe *File) codataStart() {
 	octrl.Align(pe.File, fileAlignment)
-	pe.l.Label("PE.SectionStart")
+	pe.l.Label("Codata.Start")
 }
 
-func (pe *File) sectionEnd() {
-	pe.l.Label("PE.SectionEnd")
+func (pe *File) codataEnd() {
+	pe.l.Label("Codata.End")
 	octrl.Align(pe.File, fileAlignment)
-	pe.l.Label("PE.SectionAlignEnd")
+	pe.l.Label("Codata.AlignEnd")
 }
 
 func (pe *File) Seek(offset int64, whence int) (int64, error) {
-	fBase, err := pe.l.Get("PE.SectionStart")
+	fBase, err := pe.l.Get("Codata.Start")
 	if err != nil {
 		return 0, err
 	}
@@ -204,7 +204,7 @@ func (pe *File) DLLFuncPtr(dll string, function string) func(bin.WordConv) {
 }
 
 func (pe *File) writeImportDescriptors() {
-	pe.l.Label("PE.ImportDescriptors")
+	pe.l.Label("ImportDescriptors")
 	for dll, _ := range pe.imps { // 输出 IMAGE_IMPORT_DESCRIPTOR 数组
 		pe.pitRVA("DLL." + dll + ".Thunk", bin.Dword) // OriginalFirstThunk
 		pe.w.Dword(0) // TimeDateStamp
